@@ -29,7 +29,7 @@ class SimpleGoogleDocs:
             self.service = None
     
     def add_data(self, nama, no_telp, alamat):
-        """Tambahkan data ke Google Docs"""
+        """Tambahkan data ke Google Docs (method lama untuk backward compatibility)"""
         try:
             if not self.service:
                 return False, "Service tidak tersedia"
@@ -63,27 +63,69 @@ class SimpleGoogleDocs:
             logger.error(error_msg)
             return False, error_msg
     
-    def init_document(self):
-        """Inisialisasi dokumen dengan header jika diperlukan"""
+    def add_data_with_kode(self, kode_sa, nama, no_telp, alamat):
+        """Tambahkan data dengan Kode SA ke Google Docs"""
         try:
             if not self.service:
+                logger.error("❌ Google Docs service tidak tersedia")
+                return False, "Service tidak tersedia"
+            
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Format dengan Kode SA di awal
+            data_row = f"\n{kode_sa} | {nama} | {no_telp} | {alamat} | {timestamp}"
+            
+            requests = [{
+                'insertText': {
+                    'endOfSegmentLocation': {
+                        'segmentId': ''
+                    },
+                    'text': data_row
+                }
+            }]
+            
+            # Execute request
+            result = self.service.documents().batchUpdate(
+                documentId=config.DOCUMENT_ID,
+                body={'requests': requests}
+            ).execute()
+            
+            logger.info(f"✅ Data berhasil ditambahkan: {kode_sa} - {nama}")
+            return True, "Data berhasil disimpan"
+            
+        except Exception as e:
+            error_msg = f"Error menyimpan data: {e}"
+            logger.error(f"❌ {error_msg}")
+            return False, error_msg
+    
+    def init_document(self):
+        """Inisialisasi dokumen dengan header yang include Kode SA"""
+        try:
+            if not self.service:
+                logger.error("❌ Service tidak tersedia untuk init document")
                 return False
             
-            # Cek apakah dokumen sudah memiliki header
+            # Test koneksi dengan get document
             document = self.service.documents().get(documentId=config.DOCUMENT_ID).execute()
+            logger.info("✅ Berhasil mengakses dokumen Google Docs")
+            
             content = document.get('body', {}).get('content', [])
             
-            # Jika dokumen kosong atau tidak ada header, tambahkan
+            # Cek apakah dokumen sudah memiliki header
             has_header = False
             for element in content:
                 if 'paragraph' in element:
-                    text = element['paragraph'].get('elements', [{}])[0].get('textRun', {}).get('content', '')
-                    if 'Nama |' in text or 'DATA REKAP' in text:
-                        has_header = True
+                    text_elements = element['paragraph'].get('elements', [])
+                    for text_element in text_elements:
+                        text_content = text_element.get('textRun', {}).get('content', '')
+                        if 'Kode SA |' in text_content or 'DATA REKAP RLEGS' in text_content:
+                            has_header = True
+                            break
+                    if has_header:
                         break
             
             if not has_header:
-                header = "\n=== DATA REKAP ===\nNama | No. Telepon | Alamat | Timestamp\n" + "-"*70
+                header = "\n=== DATA REKAP RLEGS ===\nKode SA | Nama | No. Telepon | Alamat | Timestamp\n" + "-"*80
                 
                 requests = [{
                     'insertText': {
@@ -99,10 +141,13 @@ class SimpleGoogleDocs:
                     body={'requests': requests}
                 ).execute()
                 
-                logger.info("✅ Header dokumen diinisialisasi")
+                logger.info("✅ Header dokumen RLEGS diinisialisasi")
+            else:
+                logger.info("✅ Header dokumen sudah ada")
             
             return True
             
         except Exception as e:
-            logger.error(f"Error init document: {e}")
+            error_msg = f"Error init document: {e}"
+            logger.error(f"❌ {error_msg}")
             return False
