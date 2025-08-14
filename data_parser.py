@@ -93,38 +93,38 @@ class DataParser:
     def format_example():
         """Contoh format yang didukung"""
         return """
-📝 **Format yang didukung:**
+            📝 **Format yang didukung:**
 
-**1. Dengan koma (,):**
-`Nama, NoTelp, Alamat`
-Contoh: `John Doe, 081234567890, Jl. Sudirman No. 1 Jakarta Pusat`
+            **1. Dengan koma (,):**
+            `Nama, NoTelp, Alamat`
+            Contoh: `John Doe, 081234567890, Jl. Sudirman No. 1 Jakarta Pusat`
 
-**2. Dengan garis (|):**
-`Nama | NoTelp | Alamat` 
-Contoh: `John Doe | 081234567890 | Jl. Sudirman No. 1 Jakarta`
+            **2. Dengan garis (|):**
+            `Nama | NoTelp | Alamat` 
+            Contoh: `John Doe | 081234567890 | Jl. Sudirman No. 1 Jakarta`
 
-**3. Baris baru:**
-```
-Nama
-NoTelp  
-Alamat
-```
-Contoh:
-```
-John Doe
-081234567890
-Jl. Sudirman No. 1 Jakarta Pusat
-```
+            **3. Baris baru:**
+            ```
+            Nama
+            NoTelp  
+            Alamat
+            ```
+            Contoh:
+            ```
+            John Doe
+            081234567890
+            Jl. Sudirman No. 1 Jakarta Pusat
+            ```
 
-**4. Spasi (auto-detect):**
-`Nama NoTelp Alamat`
-Contoh: `John Doe 081234567890 Jl. Sudirman Jakarta`
+            **4. Spasi (auto-detect):**
+            `Nama NoTelp Alamat`
+            Contoh: `John Doe 081234567890 Jl. Sudirman Jakarta`
 
-**Tips:**
-• Nama minimal 2 karakter
-• Nomor telepon minimal 10 karakter
-• Alamat minimal 10 karakter
-• Gunakan format yang paling nyaman untuk Anda!
+            **Tips:**
+            • Nama minimal 2 karakter
+            • Nomor telepon minimal 10 karakter
+            • Alamat minimal 10 karakter
+            • Gunakan format yang paling nyaman untuk Anda!
         """
     
     @staticmethod

@@ -1,0 +1,4 @@
+/.env
+/credentials.json
+/.telebot-venv
+/__pycache__
