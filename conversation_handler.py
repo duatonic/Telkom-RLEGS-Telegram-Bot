@@ -188,6 +188,9 @@ class ConversationHandler:
         # Show summary and save
         await self._process_final_data(update, session)
     
+    async def _handle_witel(self, update, session, witel):
+        return
+
     async def _process_final_data(self, update, session):
         """Process final data and save to Google Docs"""
         data = session.data

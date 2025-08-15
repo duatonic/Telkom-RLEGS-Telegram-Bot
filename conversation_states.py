@@ -48,7 +48,7 @@ class UserSession:
             'telepon_pic': None,
             'paket_deal': None,
             'deal_bundling': None,
-            'foto_evidence': None
+            'foto_evidence': None,
         }
     
     def set_state(self, new_state):
