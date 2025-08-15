@@ -7,7 +7,7 @@ class DataParser:
     @staticmethod
     def parse_data(text):
         """
-        Parse text input menjadi nama, no_telp, alamat
+        Parse text input menjadi nama, no_telp, witel        
         Mendukung berbagai format input
         """
         text = text.strip()
@@ -19,7 +19,7 @@ class DataParser:
                 return {
                     'nama': parts[0],
                     'no_telp': parts[1],
-                    'alamat': ', '.join(parts[2:])  # Gabungkan sisa sebagai alamat
+                    'witel': ', '.join(parts[2:])  # Gabungkan sisa sebagai witel
                 }
         
         # Format 2: Pipe separated  
@@ -29,7 +29,7 @@ class DataParser:
                 return {
                     'nama': parts[0],
                     'no_telp': parts[1],
-                    'alamat': ' | '.join(parts[2:]).strip()  # Fix: tambah spasi
+                    'witel': ' | '.join(parts[2:]).strip()  # Fix: tambah spasi
                 }
         
         # Format 3: New line separated
@@ -39,7 +39,7 @@ class DataParser:
                 return {
                     'nama': lines[0],
                     'no_telp': lines[1],
-                    'alamat': ' '.join(lines[2:])  # Gabungkan sisa sebagai alamat
+                    'witel': ' '.join(lines[2:])  # Gabungkan sisa sebagai witel
                 }
         
         # Format 4: Space separated (minimal parsing)
@@ -52,14 +52,14 @@ class DataParser:
                 phone = phone_match.group(1).strip()
                 # Ambil text sebelum nomor sebagai nama
                 name_part = text[:phone_match.start()].strip()
-                # Ambil text setelah nomor sebagai alamat  
+                # Ambil text setelah nomor sebagai witel  
                 address_part = text[phone_match.end():].strip()
                 
                 if name_part and address_part:
                     return {
                         'nama': name_part,
                         'no_telp': phone,
-                        'alamat': address_part
+                        'witel': address_part
                     }
         
         # Jika gagal parsing
@@ -73,7 +73,7 @@ class DataParser:
         
         nama = data.get('nama', '').strip()
         no_telp = data.get('no_telp', '').strip()
-        alamat = data.get('alamat', '').strip()
+        witel = data.get('witel', '').strip()
         
         if len(nama) < 2:
             return False, "Nama terlalu pendek (minimal 2 karakter)"
@@ -84,7 +84,7 @@ class DataParser:
         if not any(char.isdigit() for char in no_telp):
             return False, "Nomor telepon harus mengandung angka"
         
-        if len(alamat) < 10:
+        if len(witel) < 10:
             return False, "Alamat terlalu pendek (minimal 10 karakter)"
         
         return True, "Valid"

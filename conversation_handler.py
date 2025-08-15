@@ -37,12 +37,9 @@ class ConversationHandler:
         session.set_state(ConversationState.WAITING_KODE_SA)
         
         welcome_message = f"""
-            **Tahap Input Data Dimulai!**
-        
-            Silahkan jawab seluruh pertanyaan dengan sesuai dan data Anda akan otomatis tersimpan dalam sistem.
+**Tahap Input Data Dimulai!**
 
-            📝 **Pertanyaan 1**
-            Silakan masukkan **Kode SA** Anda:
+**1.** Masukkan **Kode SA** Anda:
         """
                 
         await send_message(welcome_message, parse_mode='Markdown')
@@ -64,8 +61,16 @@ class ConversationHandler:
         elif session.state == ConversationState.WAITING_TELEPON:
             await self._handle_telepon(update, session, user_message)
         
-        elif session.state == ConversationState.WAITING_ALAMAT:
-            await self._handle_alamat(update, session, user_message)
+        elif session.state == ConversationState.WAITING_TELDA:
+            await self._handle_telda(update, session, user_message)
+        
+        elif session.state == ConversationState.WAITING_TANGGAL:
+            await self._handle_tanggal(update, session, user_message)
+        
+        elif session.state == ConversationState.KEGIATAN:
+            await self._handle_kegiatan(update, session, user_message)
+        
+        # Note: WAITING_WITEL and WAITING_KATEGORI ditangani via callback, bukan text message
         
         else:
             # User belum start conversation - show welcome with buttons
@@ -76,17 +81,16 @@ class ConversationHandler:
         user_name = update.effective_user.first_name
         
         welcome_text = f"""
-            👋 **Halo {user_name}!**
+**Halo {user_name}!** 👋
 
-            🤖 **ChatBot Rekapitulasi Data RLEGS III**
+🤖**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
 
-            📝 Pilih aksi yang ingin Anda lakukan:
-        """
+Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
+    """
         
         keyboard = [
-            [InlineKeyboardButton("🚀 Mulai Input Data", callback_data='start_input')],
-            [InlineKeyboardButton("📊 Lihat Status", callback_data='show_status')],
-            [InlineKeyboardButton("❓ Bantuan", callback_data='show_help')]
+            [InlineKeyboardButton("Start", callback_data='start_input')],
+            [InlineKeyboardButton("Help", callback_data='show_help')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -116,8 +120,7 @@ class ConversationHandler:
         
         # Second bubble - next step
         next_step = f"""
-            📝 **Pertanyaan 2**
-            Masukkan **Nama Lengkap** Anda:
+**2.** Masukkan **Nama Lengkap** Anda:
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
@@ -141,8 +144,7 @@ class ConversationHandler:
         
         # Second bubble - next step
         next_step = f"""
-            📝 **Pertanyaan 3**
-            Masukkan **No. Telepon** Anda:
+**3.** Masukkan **No. Telepon** Anda:
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
@@ -158,39 +160,208 @@ class ConversationHandler:
             return
         
         session.add_data('no_telp', result)
-        session.set_state(ConversationState.WAITING_ALAMAT)
+        session.set_state(ConversationState.WAITING_WITEL)
         
         # First bubble - confirmation
         confirmation = f"✅ **No. Telepon:** {result}"
         await update.message.reply_text(confirmation, parse_mode='Markdown')
         
+        # Second bubble - next step with buttons
+        next_step = f"""
+**4.** Pilih **Witel** Anda:
+        """
+        
+        # Create keyboard with 8 Witel options
+        keyboard = [
+            [InlineKeyboardButton("Bali", callback_data='witel_bali')],
+            [InlineKeyboardButton("Jatim Barat", callback_data='witel_jatim_barat')],
+            [InlineKeyboardButton("Jatim Timur", callback_data='witel_jatim_timur')],
+            [InlineKeyboardButton("Nusa Tenggara", callback_data='witel_nusa_tenggara')],
+            [InlineKeyboardButton("Semarang Jateng", callback_data='witel_semarang_jateng')],
+            [InlineKeyboardButton("Solo Jateng Timur", callback_data='witel_solo_jateng_timur')],
+            [InlineKeyboardButton("Suramadu", callback_data='witel_suramadu')],
+            [InlineKeyboardButton("Yogya Jateng Selatan", callback_data='witel_yogya_jateng_selatan')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_witel_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Witel selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract witel name from callback_data
+        witel_map = {
+            'witel_bali': 'Bali',
+            'witel_jatim_barat': 'Jatim Barat',
+            'witel_jatim_timur': 'Jatim Timur',
+            'witel_nusa_tenggara': 'Nusa Tenggara',
+            'witel_semarang_jateng': 'Semarang Jateng',
+            'witel_solo_jateng_timur': 'Solo Jateng Timur',
+            'witel_suramadu': 'Suramadu',
+            'witel_yogya_jateng_selatan': 'Yogya Jateng Selatan'
+        }
+        
+        selected_witel = witel_map.get(query.data)
+        
+        if not selected_witel:
+            await query.message.reply_text("❌ Pilihan Witel tidak valid!")
+            return
+        
+        # Save data and move to next step
+        session.add_data('witel', selected_witel)
+        session.set_state(ConversationState.WAITING_TELDA)
+        
+        # Confirmation message
+        confirmation = f"✅ **Witel:** {selected_witel}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+
         # Second bubble - next step
         next_step = f"""
-            📝 **Pertanyaan 4**
-            Sebutkan **Telkom Daerah** Anda:
+**5.** Masukkan **Telkom Daerah** Anda:
+        """
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown')
+    
+    async def _handle_telda(self, update, session, telda):
+        """Handle Telda input"""
+        is_valid, result = self.validator.validate_telda(telda)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Telkom Daerah yang benar:"
+            )
+            return
+        
+        # Save data and move to next step
+        session.add_data('telda', result)
+        session.set_state(ConversationState.WAITING_TANGGAL)
+        
+        # First bubble - confirmation
+        confirmation = f"✅ **Telkom Daerah:** {result}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Second bubble - next step
+        next_step = f"""
+**6.** Masukkan **Tanggal** (format: DD/MM/YYYY):
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
     
-    async def _handle_alamat(self, update, session, alamat):
-        """Handle Alamat input - Final step"""
-        is_valid, result = self.validator.validate_alamat(alamat)
+    async def _handle_tanggal(self, update, session, tanggal):
+        """Handle Tanggal input"""
+        # Basic validation for date format
+        import re
+        date_pattern = r'^(\d{1,2})/(\d{1,2})/(\d{4})$'
         
-        if not is_valid:
+        if not re.match(date_pattern, tanggal):
             await update.message.reply_text(
-                f"❌ {result}\n\nSilakan masukkan alamat yang benar:"
+                "❌ Format tanggal tidak valid. Gunakan format DD/MM/YYYY (contoh: 15/08/2025)"
             )
             return
         
-        session.add_data('alamat', result)
-        session.set_state(ConversationState.COMPLETED)
+        # Save data and move to next step
+        session.add_data('tanggal', tanggal)
+        session.set_state(ConversationState.WAITING_KATEGORI)
         
-        # Show summary and save
+        # First bubble - confirmation
+        confirmation = f"✅ **Tanggal:** {tanggal}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Second bubble - next step with buttons
+        next_step = f"""
+**7.** Pilih **Kategori Pelanggan** Anda:
+        """
+        
+        # Create keyboard with 4 Kategori Pelanggan options
+        keyboard = [
+            [InlineKeyboardButton("Kawasan Industri", callback_data='kategori_kawasan_industri')],
+            [InlineKeyboardButton("Desa", callback_data='kategori_desa')],
+            [InlineKeyboardButton("Puskesmas", callback_data='kategori_puskesmas')],
+            [InlineKeyboardButton("Kecamatan", callback_data='kategori_kecamatan')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_kategori_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Kategori Pelanggan selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        category_map = {
+            'kategori_kawasan_industri': 'Kawasan Industri',
+            'kategori_desa': 'Desa',
+            'kategori_puskesmas': 'Puskesmas',
+            'kategori_kecamatan': 'Kecamatan',
+        }
+        
+        selected_category = category_map.get(query.data)
+        
+        if not selected_category:
+            await query.message.reply_text("❌ Pilihan Kategori tidak valid!")
+            return
+        
+        # Save data and move to next step
+        session.add_data('kategori', selected_category)
+        session.set_state(ConversationState.KEGIATAN)
+        
+        # FIXED: Add confirmation message
+        confirmation = f"✅ **Kategori Pelanggan:** {selected_category}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+
+        # Continue to next step
+        next_step = f"""
+**8.** Masukkan **Kegiatan**:
+        """
+        # Create keyboard with 2 Kategori Kegiatan options
+        keyboard = [
+            [InlineKeyboardButton("Visit", callback_data='kegiatan_visit')],
+            [InlineKeyboardButton("Dealing", callback_data='kegiatan_dealing')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_kegiatan_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Kategori Kegiatan selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        kegiatan_map = {
+            'kegiatan_visit': 'Visit',
+            'kegiatan_dealing': 'Dealing',
+        }
+        
+        selected_kegiatan = kegiatan_map.get(query.data)
+        
+        if not selected_kegiatan:
+            await query.message.reply_text("❌ Pilihan Kegiatan tidak valid!")
+            return
+        
+        # Confirmation
+        confirmation = f"✅ **Kegiatan:** {kegiatan_map}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+        
+                # Save data and move to next step
+        session.add_data('kategori', selected_kegiatan)
+        session.set_state(ConversationState.COMPLETED)
+
+        # Process final data
         await self._process_final_data(update, session)
     
-    async def _handle_witel(self, update, session, witel):
-        return
-
     async def _process_final_data(self, update, session):
         """Process final data and save to Google Docs"""
         data = session.data
@@ -199,13 +370,17 @@ class ConversationHandler:
         completion_msg = "✅ **Data Lengkap Berhasil Dikumpulkan!**"
         await update.message.reply_text(completion_msg, parse_mode='Markdown')
         
-        # Second bubble - summary
+        # Second bubble - COMPLETE SUMMARY
         summary = f"""
-            📋 **Ringkasan Data:**
-            • **Kode SA:** {data['kode_sa']}
-            • **Nama:** {data['nama']}
-            • **No. Telepon:** {data['no_telp']}
-            • **Telkom Daerah:** {data['alamat']}
+📋 **Ringkasan Data:**
+• **Kode SA:** {data['kode_sa']}
+• **Nama:** {data['nama']}
+• **No. Telepon:** {data['no_telp']}
+• **Witel:** {data['witel']}
+• **Telkom Daerah:** {data['telda']}
+• **Tanggal:** {data['tanggal']}
+• **Kategori Pelanggan:** {data['kategori']}
+• **Kegiatan:** {data['kegiatan']}
         """
         
         await update.message.reply_text(summary, parse_mode='Markdown')
@@ -215,12 +390,16 @@ class ConversationHandler:
         status_msg = await update.message.reply_text(saving_msg, parse_mode='Markdown')
         
         try:
-            # Save to Google Docs
+            # Save to Google Docs with 8 parameters
             success, message = self.docs_handler.add_data_with_kode(
                 data['kode_sa'], 
                 data['nama'], 
                 data['no_telp'], 
-                data['alamat']
+                data['witel'],
+                data['telda'],
+                data['tanggal'],
+                data['kategori'],
+                data['kegiatan']
             )
             
             if success:
@@ -232,13 +411,13 @@ class ConversationHandler:
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
                 final_msg = f"""
-                    🎉 **Data Berhasil Disimpan!**
+🎉 **Data Berhasil Disimpan!**
 
-                    🆔 Kode SA: {data['kode_sa']}
-                    ✅ Data Anda telah tersimpan ke Google Docs
-                    🕐 Waktu: Otomatis tercatat
-                    ---
-                    💡 **Pilih aksi selanjutnya:**
+🆔 Kode SA: {data['kode_sa']}
+✅ Data lengkap (8 field) telah tersimpan ke Google Docs
+🕐 Waktu: Otomatis tercatat
+---
+💡 **Pilih aksi selanjutnya:**
                 """
                 
                 await status_msg.edit_text(final_msg, parse_mode='Markdown', reply_markup=reply_markup)
@@ -257,11 +436,11 @@ class ConversationHandler:
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
                 error_msg = f"""
-                    ❌ **Gagal Menyimpan Data**
+❌ **Gagal Menyimpan Data**
 
-                    Error: {message}
+Error: {message}
 
-                    🔄 **Opsi:**
+🔄 **Opsi:**
                 """
                 
                 await status_msg.edit_text(error_msg, parse_mode='Markdown', reply_markup=reply_markup)
@@ -312,33 +491,52 @@ class ConversationHandler:
         completed, total = session.get_progress()
         progress_bar = "🟩" * completed + "⬜" * (total - completed)
         
-        current_step = ""
-        if session.state == ConversationState.WAITING_KODE_SA:
-            current_step = "Menunggu Kode SA"
-        elif session.state == ConversationState.WAITING_NAMA:
-            current_step = "Menunggu Nama Lengkap"
-        elif session.state == ConversationState.WAITING_TELEPON:
-            current_step = "Menunggu No. Telepon"
-        elif session.state == ConversationState.WAITING_ALAMAT:
-            current_step = "Menunggu Telkom Daerah"
+        # Map states to human readable descriptions
+        state_descriptions = {
+            ConversationState.WAITING_KODE_SA: "Menunggu Kode SA",
+            ConversationState.WAITING_NAMA: "Menunggu Nama Lengkap",
+            ConversationState.WAITING_TELEPON: "Menunggu No. Telepon",
+            ConversationState.WAITING_WITEL: "Menunggu Pilihan Witel",
+            ConversationState.WAITING_TELDA: "Menunggu Telkom Daerah",
+            ConversationState.WAITING_TANGGAL: "Menunggu Tanggal",
+            ConversationState.WAITING_KATEGORI: "Menunggu Pilihan Kategori",
+            ConversationState.KEGIATAN: "Menunggu Kegiatan",
+        }
         
+        current_step = state_descriptions.get(session.state, "Status tidak dikenal")
+
         status_msg = f"""
-            📊 **Status Input Data**
+📊 **Status Input Data**
 
-            🔄 **Progress:** {completed}/{total} {progress_bar}
-            📍 **Step Saat Ini:** {current_step}
+🔄 **Progress:** {completed}/8 {progress_bar}
+📍 **Step Saat Ini:** {current_step}
 
-            ✅ **Data yang Sudah Diisi:**
+✅ **Data yang Sudah Diisi:**
         """
         
-        if session.data['kode_sa']:
-            status_msg += f"\n• Kode SA: {session.data['kode_sa']}"
-        if session.data['nama']:
-            status_msg += f"\n• Nama: {session.data['nama']}"
-        if session.data['no_telp']:
-            status_msg += f"\n• No. Telepon: {session.data['no_telp']}"
-        if session.data['alamat']:
-            status_msg += f"\n• Telkom Daerah: {session.data['alamat']}"
+        # Show completed data
+        data_display = []
+        if session.data.get('kode_sa'):
+            data_display.append(f"• Kode SA: {session.data['kode_sa']}")
+        if session.data.get('nama'):
+            data_display.append(f"• Nama: {session.data['nama']}")
+        if session.data.get('no_telp'):
+            data_display.append(f"• No. Telepon: {session.data['no_telp']}")
+        if session.data.get('witel'):
+            data_display.append(f"• Witel: {session.data['witel']}")
+        if session.data.get('telda'):
+            data_display.append(f"• Telkom Daerah: {session.data['telda']}")
+        if session.data.get('tanggal'):
+            data_display.append(f"• Tanggal: {session.data['tanggal']}")
+        if session.data.get('kategori'):
+            data_display.append(f"• Kategori: {session.data['kategori']}")
+        if session.data.get('kegiatan'):
+            data_display.append(f"• Kegiatan: {session.data['kegiatan']}")
+        
+        if data_display:
+            status_msg += "\n" + "\n".join(data_display)
+        else:
+            status_msg += "\n• (Belum ada data yang diisi)"
         
         status_msg += "\n\n💡 **Lanjutkan dengan mengirim data yang diminta**"
         
