@@ -18,4 +18,9 @@ Thumbs.db
 /.env
 /credentials.json
 /.telebot-venv
+/.testgdocs-venv
 /__pycache__
+
+/token.pickle
+/test_save_to_gdocs.py
+/credentials-test.json

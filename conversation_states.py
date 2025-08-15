@@ -6,7 +6,19 @@ class ConversationState(Enum):
     WAITING_KODE_SA = "waiting_kode_sa"
     WAITING_NAMA = "waiting_nama"
     WAITING_TELEPON = "waiting_telepon"
-    WAITING_ALAMAT = "waiting_alamat"
+    WAITING_WITEL = "waiting_witel"
+    WAITING_TELDA = "waiting_telda"
+    WAITING_TANGGAL = "waiting_tanggal"
+    WAITING_KATEGORI = "waiting_kategori"
+    KEGIATAN = "waiting_kegiatan"
+    LAYANAN = "waiting_layanan"
+    TARIF = "waiting_tarif"
+    NAMA_PIC = "waiting_nama_pic"
+    JABATAN_PIC = "waiting_jabatan_pic"
+    TELEPON_PIC = "waiting_telepon_pic"
+    PAKET_DEAL = "waiting_paket_deal"
+    DEAL_BUNDLING = "waiting_deal_bundling"
+    FOTO_EVIDENCE = "waiting_foto_evidence"
     COMPLETED = "completed"
 
 class UserSession:
@@ -24,7 +36,19 @@ class UserSession:
             'kode_sa': None,
             'nama': None,
             'no_telp': None,
-            'alamat': None
+            'witel': None,
+            'telda': None,
+            'tanggal': None,
+            'kategori': None,
+            'kegiatan': None,
+            'layanan': None,
+            'tarif': None,
+            'nama_pic': None,
+            'jabatan_pic': None,
+            'telepon_pic': None,
+            'paket_deal': None,
+            'deal_bundling': None,
+            'foto_evidence': None
         }
     
     def set_state(self, new_state):
@@ -41,6 +65,23 @@ class UserSession:
     
     def get_progress(self):
         """Get current progress"""
-        steps = ['kode_sa', 'nama', 'no_telp', 'alamat']
+        steps = [
+            'kode_sa',
+            'nama',
+            'no_telp',
+            'witel',
+            'telda',
+            'tanggal',
+            'kategori',
+            'kegiatan',
+            'layanan',
+            'tarif',
+            'nama_pic',
+            'jabatan_pic',
+            'telepon_pic',
+            'paket_deal',
+            'deal_bundling',
+            'foto_evidence',
+        ]
         completed = sum(1 for step in steps if self.data[step])
         return completed, len(steps)

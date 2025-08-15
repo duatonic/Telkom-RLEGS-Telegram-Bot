@@ -36,14 +36,15 @@ class ConversationHandler:
         # Set state to waiting for Kode SA
         session.set_state(ConversationState.WAITING_KODE_SA)
         
-        welcome_message = f""" **Tahap Input Data Dimulai!**
+        welcome_message = f"""
+            **Tahap Input Data Dimulai!**
         
-Silahkan jawab seluruh pertanyaan dengan sesuai dan data Anda akan otomatis tersimpan dalam sistem.
+            Silahkan jawab seluruh pertanyaan dengan sesuai dan data Anda akan otomatis tersimpan dalam sistem.
 
-📝 **Pertanyaan 1**
-Silakan masukkan **Kode SA** Anda:
-"""
-        
+            📝 **Pertanyaan 1**
+            Silakan masukkan **Kode SA** Anda:
+        """
+                
         await send_message(welcome_message, parse_mode='Markdown')
         logger.info(f"Started conversation for user {user_id} ({user_name})")
     
@@ -74,11 +75,13 @@ Silakan masukkan **Kode SA** Anda:
         """Show welcome menu with buttons"""
         user_name = update.effective_user.first_name
         
-        welcome_text = f"""👋 **Halo {user_name}!**
+        welcome_text = f"""
+            👋 **Halo {user_name}!**
 
-🤖 **ChatBot Rekapitulasi Data RLEGS III**
+            🤖 **ChatBot Rekapitulasi Data RLEGS III**
 
-📝 Pilih aksi yang ingin Anda lakukan:"""
+            📝 Pilih aksi yang ingin Anda lakukan:
+        """
         
         keyboard = [
             [InlineKeyboardButton("🚀 Mulai Input Data", callback_data='start_input')],
@@ -112,9 +115,10 @@ Silakan masukkan **Kode SA** Anda:
         await update.message.reply_text(confirmation, parse_mode='Markdown')
         
         # Second bubble - next step
-        next_step = f"""📝 **Pertanyaan 2**
-Masukkan **Nama Lengkap** Anda:
-"""
+        next_step = f"""
+            📝 **Pertanyaan 2**
+            Masukkan **Nama Lengkap** Anda:
+        """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
     
@@ -136,9 +140,10 @@ Masukkan **Nama Lengkap** Anda:
         await update.message.reply_text(confirmation, parse_mode='Markdown')
         
         # Second bubble - next step
-        next_step = f"""📝 **Pertanyaan 3**
-Masukkan **No. Telepon** Anda:
-"""
+        next_step = f"""
+            📝 **Pertanyaan 3**
+            Masukkan **No. Telepon** Anda:
+        """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
     
@@ -160,9 +165,10 @@ Masukkan **No. Telepon** Anda:
         await update.message.reply_text(confirmation, parse_mode='Markdown')
         
         # Second bubble - next step
-        next_step = f"""📝 **Pertanyaan 4**
-Sebutkan **Telkom Daerah** Anda:
-"""
+        next_step = f"""
+            📝 **Pertanyaan 4**
+            Sebutkan **Telkom Daerah** Anda:
+        """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
     
@@ -191,11 +197,13 @@ Sebutkan **Telkom Daerah** Anda:
         await update.message.reply_text(completion_msg, parse_mode='Markdown')
         
         # Second bubble - summary
-        summary = f"""📋 **Ringkasan Data:**
-• **Kode SA:** {data['kode_sa']}
-• **Nama:** {data['nama']}
-• **No. Telepon:** {data['no_telp']}
-• **Telkom Daerah:** {data['alamat']}"""
+        summary = f"""
+            📋 **Ringkasan Data:**
+            • **Kode SA:** {data['kode_sa']}
+            • **Nama:** {data['nama']}
+            • **No. Telepon:** {data['no_telp']}
+            • **Telkom Daerah:** {data['alamat']}
+        """
         
         await update.message.reply_text(summary, parse_mode='Markdown')
         
@@ -220,13 +228,15 @@ Sebutkan **Telkom Daerah** Anda:
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                final_msg = f"""🎉 **Data Berhasil Disimpan!**
+                final_msg = f"""
+                    🎉 **Data Berhasil Disimpan!**
 
-🆔 Kode SA: {data['kode_sa']}
-✅ Data Anda telah tersimpan ke Google Docs
-🕐 Waktu: Otomatis tercatat
----
-💡 **Pilih aksi selanjutnya:**"""
+                    🆔 Kode SA: {data['kode_sa']}
+                    ✅ Data Anda telah tersimpan ke Google Docs
+                    🕐 Waktu: Otomatis tercatat
+                    ---
+                    💡 **Pilih aksi selanjutnya:**
+                """
                 
                 await status_msg.edit_text(final_msg, parse_mode='Markdown', reply_markup=reply_markup)
                 
@@ -243,11 +253,13 @@ Sebutkan **Telkom Daerah** Anda:
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                error_msg = f"""❌ **Gagal Menyimpan Data**
+                error_msg = f"""
+                    ❌ **Gagal Menyimpan Data**
 
-Error: {message}
+                    Error: {message}
 
-🔄 **Opsi:**"""
+                    🔄 **Opsi:**
+                """
                 
                 await status_msg.edit_text(error_msg, parse_mode='Markdown', reply_markup=reply_markup)
                 
@@ -307,12 +319,14 @@ Error: {message}
         elif session.state == ConversationState.WAITING_ALAMAT:
             current_step = "Menunggu Telkom Daerah"
         
-        status_msg = f"""📊 **Status Input Data**
+        status_msg = f"""
+            📊 **Status Input Data**
 
-🔄 **Progress:** {completed}/{total} {progress_bar}
-📍 **Step Saat Ini:** {current_step}
+            🔄 **Progress:** {completed}/{total} {progress_bar}
+            📍 **Step Saat Ini:** {current_step}
 
-✅ **Data yang Sudah Diisi:**"""
+            ✅ **Data yang Sudah Diisi:**
+        """
         
         if session.data['kode_sa']:
             status_msg += f"\n• Kode SA: {session.data['kode_sa']}"
