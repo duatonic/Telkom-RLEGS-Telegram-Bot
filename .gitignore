@@ -12,6 +12,8 @@ __pycache__/
 *.pyc
 *.pyo
 
+/.git
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -24,3 +26,6 @@ Thumbs.db
 /token.pickle
 /test_save_to_gdocs.py
 /credentials-test.json
+
+test.py
+test_image.png

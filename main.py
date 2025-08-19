@@ -6,22 +6,6 @@ import config
 
 user_forms = {}
 
-class InputData:
-    def __init__(self):
-        self.nama = None
-        self.telepon = None
-        self.witel = None
-        self.telda = None
-
-    def __str__(self):
-        return f"{self.nama}, {self.telepon}, {self.witel}, {self.telda}"
-    
-    def _next_empty(self):
-        for field in ['nama', 'telepon', 'witel', 'telda']:
-            if getattr(self, field) is None:
-                return field
-        return None
-
 # Setup logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
