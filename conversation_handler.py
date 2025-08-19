@@ -67,10 +67,16 @@ class ConversationHandler:
         elif session.state == ConversationState.WAITING_TANGGAL:
             await self._handle_tanggal(update, session, user_message)
         
-        elif session.state == ConversationState.KEGIATAN:
-            await self._handle_kegiatan(update, session, user_message)
+        elif session.state == ConversationState.NAMA_PIC:
+            await self._handle_nama_pic(update, session, user_message)
+
+        elif session.state == ConversationState.JABATAN_PIC:
+            await self._handle_jabatan_pic(update, session, user_message)
+            
+        elif session.state == ConversationState.TELEPON_PIC:
+            await self._handle_telepon_pic(update, session, user_message)
         
-        # Note: WAITING_WITEL and WAITING_KATEGORI ditangani via callback, bukan text message
+        # Note: WAITING_WITEL, WAITING_KATEGORI, dll ditangani via callback, bukan text message
         
         else:
             # User belum start conversation - show welcome with buttons
@@ -247,20 +253,18 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Second bubble - next step
         next_step = f"""
-**6.** Masukkan **Tanggal** (format: DD/MM/YYYY):
+**6.** Masukkan **Tanggal Visit** (format: DD/MM/YYYY):
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
     
     async def _handle_tanggal(self, update, session, tanggal):
         """Handle Tanggal input"""
-        # Basic validation for date format
-        import re
-        date_pattern = r'^(\d{1,2})/(\d{1,2})/(\d{4})$'
+        is_valid, result = self.validator.validate_tanggal(tanggal)
         
-        if not re.match(date_pattern, tanggal):
+        if not is_valid:
             await update.message.reply_text(
-                "❌ Format tanggal tidak valid. Gunakan format DD/MM/YYYY (contoh: 15/08/2025)"
+                f"❌ {result}\n\nSilakan masukkan tanggal yang benar:"
             )
             return
         
@@ -314,13 +318,13 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         session.add_data('kategori', selected_category)
         session.set_state(ConversationState.KEGIATAN)
         
-        # FIXED: Add confirmation message
+        # Confirmation message
         confirmation = f"✅ **Kategori Pelanggan:** {selected_category}"
         await query.message.reply_text(confirmation, parse_mode='Markdown')
 
         # Continue to next step
         next_step = f"""
-**8.** Masukkan **Kegiatan**:
+**8.** Pilih **Kegiatan**:
         """
         # Create keyboard with 2 Kategori Kegiatan options
         keyboard = [
@@ -329,7 +333,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
     
     async def handle_kegiatan_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle Kategori Kegiatan selection dari inline keyboard"""
@@ -351,61 +355,339 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
             await query.message.reply_text("❌ Pilihan Kegiatan tidak valid!")
             return
         
-        # Confirmation
-        confirmation = f"✅ **Kegiatan:** {kegiatan_map}"
+        # Confirmation message
+        confirmation = f"✅ **Kegiatan:** {selected_kegiatan}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Save data with correct key
+        session.add_data('kegiatan', selected_kegiatan)
+        session.set_state(ConversationState.LAYANAN)
+
+        # Continue to next step
+        next_step = f"""
+**9.** Pilih **Layanan yang digunakan saat ini**:
+        """
+        # Create keyboard with 3 Tipe Layanan options
+        keyboard = [
+            [InlineKeyboardButton("Indihome", callback_data='layanan_indihome')],
+            [InlineKeyboardButton("Indibiz", callback_data='layanan_indibiz')],
+            [InlineKeyboardButton("Kompetitor", callback_data='layanan_kompetitor')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_layanan_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Layanan selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        layanan_map = {
+            'layanan_indihome': 'Indihome',
+            'layanan_indibiz': 'Indibiz',
+            'layanan_kompetitor': 'Kompetitor'
+        }
+        
+        selected_layanan = layanan_map.get(query.data)
+        
+        if not selected_layanan:
+            await query.message.reply_text("❌ Pilihan Layanan tidak valid!")
+            return
+        
+        # Confirmation message
+        confirmation = f"✅ **Tipe Layanan:** {selected_layanan}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Save data with correct key
+        session.add_data('layanan', selected_layanan)
+        session.set_state(ConversationState.TARIF)
+
+        # Continue to next step
+        next_step = f"""
+**10.** Pilih **Tarif Layanan saat ini**:
+        """
+        # Create keyboard with 3 Tarif Layanan options
+        keyboard = [
+            [InlineKeyboardButton("< Rp 200.000", callback_data='tarif_rendah')],
+            [InlineKeyboardButton("Rp 200.000 - Rp 350.000", callback_data='tarif_menengah')],
+            [InlineKeyboardButton("> Rp 500.000", callback_data='tarif_tinggi')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_tarif_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Tarif Layanan selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        tarif_map = {
+            'tarif_rendah': '< Rp 200.000',
+            'tarif_menengah': 'Rp 200.000 - Rp 350.000',
+            'tarif_tinggi': '> Rp 500.000'
+        }
+        
+        selected_tarif = tarif_map.get(query.data)
+        
+        if not selected_tarif:
+            await query.message.reply_text("❌ Pilihan Tarif Layanan tidak valid!")
+            return
+        
+        # Confirmation message
+        confirmation = f"✅ **Tarif Layanan:** {selected_tarif}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Save data with correct key
+        session.add_data('tarif', selected_tarif)
+        session.set_state(ConversationState.NAMA_PIC)
+
+        # Second bubble - next step
+        next_step = f"""
+**11.** Masukkan **Nama PIC Pelanggan**:
+        """
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown')
+    
+    async def _handle_nama_pic(self, update, session, nama_pic):
+        """Handle Nama PIC Pelanggan input"""
+        is_valid, result = self.validator.validate_nama_pic(nama_pic)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Nama PIC Pelanggan yang benar:"
+            )
+            return
+        
+        # Save data and move to next step
+        session.add_data('nama_pic', result)
+        session.set_state(ConversationState.JABATAN_PIC)
+        
+        # First bubble - confirmation
+        confirmation = f"✅ **Nama PIC Pelanggan:** {result}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+
+        # Second bubble - next step
+        next_step = f"""
+**12.** Masukkan **Jabatan PIC**:
+        """
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown')
+    
+    async def _handle_jabatan_pic(self, update, session, jabatan_pic):
+        """Handle Jabatan PIC input"""
+        is_valid, result = self.validator.validate_jabatan_pic(jabatan_pic)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Jabatan PIC yang benar:"
+            )
+            return
+        
+        # Save data and move to next step
+        session.add_data('jabatan_pic', result)
+        session.set_state(ConversationState.TELEPON_PIC)
+        
+        # First bubble - confirmation
+        confirmation = f"✅ **Jabatan PIC:** {result}"
         await update.message.reply_text(confirmation, parse_mode='Markdown')
         
-                # Save data and move to next step
-        session.add_data('kategori', selected_kegiatan)
-        session.set_state(ConversationState.COMPLETED)
-
-        # Process final data
-        await self._process_final_data(update, session)
+        # Second bubble - next step
+        next_step = f"""
+**13.** Masukkan **Nomor HP PIC**:
+        """
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown')
     
-    async def _process_final_data(self, update, session):
+    async def _handle_telepon_pic(self, update, session, telepon_pic):
+        """Handle Nomor HP PIC input"""
+        is_valid, result = self.validator.validate_telepon_pic(telepon_pic)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Nomor HP PIC yang benar:"
+            )
+            return
+        
+        # Save data and complete the process
+        session.add_data('telepon_pic', result)
+        session.set_state(ConversationState.PAKET_DEAL)
+        
+        # First bubble - confirmation
+        confirmation = f"✅ **Nomor HP PIC:** {result}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+
+        # Continue to next step
+        next_step = f"""
+**14.** Jika Anda melakukan **Dealing, pilih salah satu deal paket Mbps**:
+        """
+        # Create keyboard with 4 Dealing Paket options
+        keyboard = [
+            [InlineKeyboardButton("50 Mbps", callback_data='paket_50')],
+            [InlineKeyboardButton("75 Mbps", callback_data='paket_75')],
+            [InlineKeyboardButton("100 Mbps", callback_data='paket_100')],
+            [InlineKeyboardButton("> 100 Mbps", callback_data='paket_>100')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_paket_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Dealing Paket selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        paket_map = {
+            'paket_50': '50 Mbps',
+            'paket_75': '75 Mbps',
+            'paket_100': '100 Mbps',
+            'paket_>100': '> 100 Mbps',
+        }
+        
+        selected_paket = paket_map.get(query.data)
+        
+        if not selected_paket:
+            await query.message.reply_text("❌ Pilihan Paket Dealing tidak valid!")
+            return
+        
+        # Confirmation message
+        confirmation = f"✅ **Deal Paket:** {selected_paket}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Save data with correct key
+        session.add_data('paket', selected_paket)
+        session.set_state(ConversationState.DEAL_BUNDLING)
+
+        # Continue to next step
+        next_step = f"""
+**15.** Pilih salah satu dealing **layanan bundling**:
+        """
+        # Create keyboard with 4 Dealing Bundling options
+        keyboard = [
+            [InlineKeyboardButton("1P Internet Only", callback_data='deal_IO')],
+            [InlineKeyboardButton("2P Internet + TV", callback_data='deal_IT')],
+            [InlineKeyboardButton("2P Internet + Telepon", callback_data='deal_ITL')],
+            [InlineKeyboardButton("3P Internet + TV + Telepon", callback_data='deal_ITT')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_bundle_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle Dealing Bundle selection dari inline keyboard"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        session = self.session_manager.get_session(user_id)
+        
+        # Extract Category name from callback_data
+        bundle_map = {
+            'deal_IO': '1P Internet Only',
+            'deal_IT': '2P Internet + TV',
+            'deal_ITL': '2P Internet + Telepon',
+            'deal_ITT': '3P Internet + TV + Telepon',
+        }
+        
+        selected_bundle = bundle_map.get(query.data)
+        
+        if not selected_bundle:
+            await query.message.reply_text("❌ Pilihan Bundling tidak valid!")
+            return
+        
+        # Confirmation message
+        confirmation = f"✅ **Deal Bundling:** {selected_bundle}"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        # Save data with correct key
+        session.add_data('bundle', selected_bundle)
+        session.set_state(ConversationState.COMPLETED)
+        
+        # Process final data
+        await self._process_final_data(query, session)
+    
+    async def _process_final_data(self, query_or_update, session):
         """Process final data and save to Google Docs"""
         data = session.data
         
+        # Handle both callback query and regular update
+        if hasattr(query_or_update, 'message'):
+            # This is a callback query
+            send_message = query_or_update.message.reply_text
+            edit_message = query_or_update.message.edit_text
+            user_id = query_or_update.from_user.id
+        else:
+            # This is a regular update
+            send_message = query_or_update.message.reply_text
+            edit_message = None
+            user_id = query_or_update.effective_user.id
+        
         # First bubble - data completion confirmation
         completion_msg = "✅ **Data Lengkap Berhasil Dikumpulkan!**"
-        await update.message.reply_text(completion_msg, parse_mode='Markdown')
+        await send_message(completion_msg, parse_mode='Markdown')
         
-        # Second bubble - COMPLETE SUMMARY
+        # Second bubble - COMPLETE SUMMARY with all fields
         summary = f"""
-📋 **Ringkasan Data:**
-• **Kode SA:** {data['kode_sa']}
-• **Nama:** {data['nama']}
-• **No. Telepon:** {data['no_telp']}
-• **Witel:** {data['witel']}
-• **Telkom Daerah:** {data['telda']}
-• **Tanggal:** {data['tanggal']}
-• **Kategori Pelanggan:** {data['kategori']}
-• **Kegiatan:** {data['kegiatan']}
+📋 **Ringkasan Data Lengkap:**
+• **Kode SA:** {data.get('kode_sa', '-')}
+• **Nama:** {data.get('nama', '-')}
+• **No. Telepon:** {data.get('no_telp', '-')}
+• **Witel:** {data.get('witel', '-')}
+• **Telkom Daerah:** {data.get('telda', '-')}
+• **Tanggal:** {data.get('tanggal', '-')}
+• **Kategori Pelanggan:** {data.get('kategori', '-')}
+• **Kegiatan:** {data.get('kegiatan', '-')}
+• **Tipe Layanan:** {data.get('layanan', '-')}
+• **Tarif Layanan:** {data.get('tarif', '-')}
+• **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
+• **Jabatan PIC:** {data.get('jabatan_pic', '-')}
+• **Nomor HP PIC:** {data.get('telepon_pic', '-')}
+• **Deal Paket:** {data.get('paket', '-')}
+• **Deal Bundling:** {data.get('bundle', '-')}
         """
         
-        await update.message.reply_text(summary, parse_mode='Markdown')
+        await send_message(summary, parse_mode='Markdown')
         
         # Third bubble - saving status
         saving_msg = "⏳ **Menyimpan ke Google Docs...**"
-        status_msg = await update.message.reply_text(saving_msg, parse_mode='Markdown')
+        status_msg = await send_message(saving_msg, parse_mode='Markdown')
         
         try:
-            # Save to Google Docs with 8 parameters
-            success, message = self.docs_handler.add_data_with_kode(
-                data['kode_sa'], 
-                data['nama'], 
-                data['no_telp'], 
-                data['witel'],
-                data['telda'],
-                data['tanggal'],
-                data['kategori'],
-                data['kegiatan']
+            # Save to Google Docs with ALL parameters
+            success, message = self.docs_handler.add_data_complete(
+                data.get('kode_sa', ''), 
+                data.get('nama', ''), 
+                data.get('no_telp', ''), 
+                data.get('witel', ''),
+                data.get('telda', ''),
+                data.get('tanggal', ''),
+                data.get('kategori', ''),
+                data.get('kegiatan', ''),
+                data.get('layanan', ''),
+                data.get('tarif', ''),
+                data.get('nama_pic', ''),
+                data.get('jabatan_pic', ''),
+                data.get('telepon_pic', ''),
+                data.get('paket', ''),
+                data.get('bundle', '')
             )
             
             if success:
                 # Success with menu buttons
                 keyboard = [
                     [InlineKeyboardButton("🚀 Input Data Baru", callback_data='start_input')],
+                    [InlineKeyboardButton("📊 Lihat Status", callback_data='show_status')],
                     [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -413,8 +695,8 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
                 final_msg = f"""
 🎉 **Data Berhasil Disimpan!**
 
-🆔 Kode SA: {data['kode_sa']}
-✅ Data lengkap (8 field) telah tersimpan ke Google Docs
+🆔 Kode SA: {data.get('kode_sa', '-')}
+✅ Data lengkap (15 field) telah tersimpan ke Google Docs
 🕐 Waktu: Otomatis tercatat
 ---
 💡 **Pilih aksi selanjutnya:**
@@ -425,7 +707,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
                 # Reset session
                 session.reset()
                 
-                logger.info(f"✅ Data saved successfully for user {update.effective_user.id}")
+                logger.info(f"✅ Data saved successfully for user {user_id}")
                 
             else:
                 # Error with retry button
@@ -475,6 +757,7 @@ Error: {message}
         
         # Add back to menu button
         keyboard = [
+            [InlineKeyboardButton("🚀 Lanjutkan Input", callback_data='start_input')],
             [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -488,8 +771,11 @@ Error: {message}
             )
             return
         
-        completed, total = session.get_progress()
-        progress_bar = "🟩" * completed + "⬜" * (total - completed)
+        # Calculate progress based on all 15 fields
+        total_fields = 15
+        completed_fields = len([k for k in session.data.keys() if session.data[k]])
+        progress_percentage = (completed_fields / total_fields) * 100
+        progress_bar = "🟩" * completed_fields + "⬜" * (total_fields - completed_fields)
         
         # Map states to human readable descriptions
         state_descriptions = {
@@ -500,7 +786,15 @@ Error: {message}
             ConversationState.WAITING_TELDA: "Menunggu Telkom Daerah",
             ConversationState.WAITING_TANGGAL: "Menunggu Tanggal",
             ConversationState.WAITING_KATEGORI: "Menunggu Pilihan Kategori",
-            ConversationState.KEGIATAN: "Menunggu Kegiatan",
+            ConversationState.KEGIATAN: "Menunggu Pilihan Kegiatan",
+            ConversationState.LAYANAN: "Menunggu Pilihan Layanan",
+            ConversationState.TARIF: "Menunggu Pilihan Tarif",
+            ConversationState.NAMA_PIC: "Menunggu Nama PIC Pelanggan",
+            ConversationState.JABATAN_PIC: "Menunggu Jabatan PIC",
+            ConversationState.TELEPON_PIC: "Menunggu Nomor HP PIC",
+            ConversationState.PAKET_DEAL: "Menunggu Deal Paket",
+            ConversationState.DEAL_BUNDLING: "Menunggu Deal Bundling",
+            ConversationState.COMPLETED: "Data Lengkap"
         }
         
         current_step = state_descriptions.get(session.state, "Status tidak dikenal")
@@ -508,7 +802,9 @@ Error: {message}
         status_msg = f"""
 📊 **Status Input Data**
 
-🔄 **Progress:** {completed}/8 {progress_bar}
+🔄 **Progress:** {completed_fields}/{total_fields} ({progress_percentage:.0f}%) 
+{progress_bar}
+
 📍 **Step Saat Ini:** {current_step}
 
 ✅ **Data yang Sudah Diisi:**
@@ -516,29 +812,37 @@ Error: {message}
         
         # Show completed data
         data_display = []
-        if session.data.get('kode_sa'):
-            data_display.append(f"• Kode SA: {session.data['kode_sa']}")
-        if session.data.get('nama'):
-            data_display.append(f"• Nama: {session.data['nama']}")
-        if session.data.get('no_telp'):
-            data_display.append(f"• No. Telepon: {session.data['no_telp']}")
-        if session.data.get('witel'):
-            data_display.append(f"• Witel: {session.data['witel']}")
-        if session.data.get('telda'):
-            data_display.append(f"• Telkom Daerah: {session.data['telda']}")
-        if session.data.get('tanggal'):
-            data_display.append(f"• Tanggal: {session.data['tanggal']}")
-        if session.data.get('kategori'):
-            data_display.append(f"• Kategori: {session.data['kategori']}")
-        if session.data.get('kegiatan'):
-            data_display.append(f"• Kegiatan: {session.data['kegiatan']}")
+        field_labels = {
+            'kode_sa': 'Kode SA',
+            'nama': 'Nama',
+            'no_telp': 'No. Telepon',
+            'witel': 'Witel',
+            'telda': 'Telkom Daerah',
+            'tanggal': 'Tanggal',
+            'kategori': 'Kategori Pelanggan',
+            'kegiatan': 'Kegiatan',
+            'layanan': 'Tipe Layanan',
+            'tarif': 'Tarif Layanan',
+            'nama_pic': 'Nama PIC Pelanggan',
+            'jabatan_pic': 'Jabatan PIC',
+            'telepon_pic': 'Nomor HP PIC',
+            'paket': 'Deal Paket',
+            'bundle': 'Deal Bundling'
+        }
+        
+        for key, label in field_labels.items():
+            if session.data.get(key):
+                data_display.append(f"• {label}: {session.data[key]}")
         
         if data_display:
             status_msg += "\n" + "\n".join(data_display)
         else:
             status_msg += "\n• (Belum ada data yang diisi)"
         
-        status_msg += "\n\n💡 **Lanjutkan dengan mengirim data yang diminta**"
+        if session.state != ConversationState.COMPLETED:
+            status_msg += "\n\n💡 **Lanjutkan dengan mengirim data yang diminta**"
+        else:
+            status_msg += "\n\n🎉 **Data sudah lengkap dan siap disimpan!**"
         
         await send_message(status_msg, parse_mode='Markdown', reply_markup=reply_markup)
     
@@ -568,14 +872,111 @@ Error: {message}
             )
             return
         
+        # Show what data will be lost
+        completed_fields = len([k for k in session.data.keys() if session.data[k]])
+        
+        if completed_fields > 0:
+            cancel_msg = f"""
+🚫 **Batalkan Proses Input Data?**
+
+⚠️ **Data yang akan hilang:**
+• {completed_fields} field yang sudah diisi
+• Progress: {completed_fields}/15 langkah
+
+❓ **Yakin ingin membatalkan?**
+            """
+        else:
+            cancel_msg = "🚫 **Proses input data dibatalkan**\n\nPilih aksi selanjutnya:"
+        
         session.reset()
         
         await send_message(
-            "🚫 **Proses input data dibatalkan**\n\n"
-            "Semua data yang belum tersimpan telah dihapus.\n"
-            "Pilih aksi selanjutnya:",
+            cancel_msg,
             parse_mode='Markdown',
             reply_markup=reply_markup
         )
         
         logger.info(f"Conversation cancelled for user {user_id}")
+    
+    async def show_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show help information"""
+        # Handle both regular message and callback query
+        if update.callback_query:
+            send_message = update.callback_query.message.reply_text
+        else:
+            send_message = update.message.reply_text
+        
+        help_text = f"""
+🤖 **Bantuan - Rekapitulasi Data RLEGS III**
+
+📝 **Cara Penggunaan:**
+1. Tekan tombol "Start" untuk memulai input data
+2. Ikuti instruksi step-by-step (15 langkah)
+3. Data akan otomatis tersimpan ke Google Docs
+
+🔢 **Data yang Dikumpulkan:**
+• Kode SA
+• Nama Lengkap
+• No. Telepon
+• Witel (8 pilihan)
+• Telkom Daerah
+• Tanggal Visit
+• Kategori Pelanggan (4 pilihan)
+• Kegiatan (2 pilihan)
+• Tipe Layanan (3 pilihan)
+• Tarif Layanan (3 pilihan)
+• Nama PIC Pelanggan
+• Jabatan PIC
+• Nomor HP PIC
+• Deal Paket (4 pilihan)
+• Deal Bundling (4 pilihan)
+
+📋 **Commands Tersedia:**
+/start - Mulai/restart bot
+/status - Lihat progress saat ini
+/cancel - Batalkan input data
+/help - Tampilkan bantuan ini
+
+💡 **Tips:**
+• Data akan tersimpan otomatis setelah lengkap
+• Gunakan /status untuk melihat progress
+• Gunakan /cancel jika ingin mengulang dari awal
+
+❓ **Butuh bantuan?** Hubungi administrator.
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("🚀 Mulai Input", callback_data='start_input')],
+            [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await send_message(help_text, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def handle_back_to_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle back to menu button"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_name = query.from_user.first_name
+        
+        welcome_text = f"""
+**Halo {user_name}!** 👋
+
+🤖**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
+
+Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("🚀 Mulai Input Data", callback_data='start_input')],
+            [InlineKeyboardButton("📊 Lihat Status", callback_data='show_status')],
+            [InlineKeyboardButton("❓ Bantuan", callback_data='show_help')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.message.edit_text(
+            welcome_text, 
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
