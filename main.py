@@ -52,7 +52,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - `/cancel` - Batalkan input yang sedang berjalan
 - `/help` - Tampilkan panduan ini
 
-🔄 **Alur Input (8 Step):**
+🔄 **Alur Input (15 Step):**
 1️⃣ Kode SA (contoh: SA001)
 2️⃣ Nama Lengkap
 3️⃣ No. Telepon
@@ -61,6 +61,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 6️⃣ Tanggal
 7️⃣ Kategori Pelanggan
 8️⃣ Kegiatan
+9️⃣ Tipe Layanan
+🔟 Tarif Layanan
+1️⃣1️⃣ Nama PIC Pelanggan
+1️⃣2️⃣ Jabatan PIC
+1️⃣3️⃣ Nomor HP PIC
+1️⃣4️⃣ Deal Paket
+1️⃣5️⃣ Deal Bundling
 
 ⚡ **Tips:**
 - Bot akan memandu step by step
@@ -131,6 +138,31 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await conversation_handler.handle_kategori_selection(update, context)
         return
     
+    # Handle Kegiatan selection buttons
+    if query.data.startswith('kegiatan_'):
+        await conversation_handler.handle_kegiatan_selection(update, context)
+        return
+    
+    # Handle Layanan selection buttons
+    if query.data.startswith('layanan_'):
+        await conversation_handler.handle_layanan_selection(update, context)
+        return
+    
+    # Handle Tarif selection buttons
+    if query.data.startswith('tarif_'):
+        await conversation_handler.handle_tarif_selection(update, context)
+        return
+    
+    # Handle Paket selection buttons
+    if query.data.startswith('paket_'):
+        await conversation_handler.handle_paket_selection(update, context)
+        return
+    
+    # Handle Deal Bundling selection buttons
+    if query.data.startswith('deal_'):
+        await conversation_handler.handle_bundle_selection(update, context)
+        return
+    
     if query.data == 'start_input':
         # Start input data process
         await conversation_handler.start_conversation(update, context)
@@ -150,7 +182,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Status tracking progress input
 • Cancel anytime dengan /cancel
 
-🔄 **Alur Input (8 Step):**
+🔄 **Alur Input (15 Step):**
 1️⃣ Kode SA (contoh: SA001)
 2️⃣ Nama Lengkap
 3️⃣ No. Telepon  
@@ -159,6 +191,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 6️⃣ Tanggal
 7️⃣ Kategori Pelanggan
 8️⃣ Kegiatan
+9️⃣ Tipe Layanan
+🔟 Tarif Layanan
+1️⃣1️⃣ Nama PIC Pelanggan
+1️⃣2️⃣ Jabatan PIC
+1️⃣3️⃣ Nomor HP PIC
+1️⃣4️⃣ Deal Paket
+1️⃣5️⃣ Deal Bundling
 
 ⚡ **Tips:**
 - Gunakan button untuk navigasi mudah
@@ -182,25 +221,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     elif query.data == 'back_to_menu':
         # Back to main menu
-        welcome_text = f"""
-**Halo {user_name}!** 👋
-
-🤖**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
-
-Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
-        """
-        
-        keyboard = [
-            [InlineKeyboardButton("Start", callback_data='start_input')],
-            [InlineKeyboardButton("Help", callback_data='show_help')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            welcome_text, 
-            parse_mode='Markdown',
-            reply_markup=reply_markup
-        )
+        await conversation_handler.handle_back_to_menu(update, context)
 
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle unknown commands with helpful response"""
@@ -256,7 +277,7 @@ def main():
     
     # Start bot
     print("🤖 Bot Step-by-Step RLEGS dengan Inline Buttons berjalan...")
-    print("📝 User flow: Menu Buttons → Input Data (8 steps) → Save")
+    print("📝 User flow: Menu Buttons → Input Data (15 steps) → Save")
     print("🔘 Features: Inline Keyboards, Auto Welcome, Status Tracking")
     print("📊 Commands: /start, /status, /cancel, /help")
     
