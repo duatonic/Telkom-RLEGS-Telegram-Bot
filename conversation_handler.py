@@ -92,12 +92,14 @@ class ConversationHandler:
         elif session.state == ConversationState.TELEPON_PIC:
             await self._handle_telepon_pic(update, session, user_message)
         
-        # Note: WAITING_WITEL, WAITING_KATEGORI, dll ditangani via callback, bukan text message
-        
-        else:
+        elif session.state == ConversationState.IDLE:
             # User belum start conversation - show welcome with buttons
             await self._show_welcome_menu(update)
-    
+        else:
+            await update.message.reply_text("Mohon untuk mengisi data sesuai format")
+
+        # Note: WAITING_WITEL, WAITING_KATEGORI, dll ditangani via callback, bukan text message
+
     async def _show_welcome_menu(self, update):
         """Show welcome menu with buttons"""
         user_name = update.effective_user.first_name
@@ -650,8 +652,8 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         session.set_state(ConversationState.COMPLETED)
         
         # TEMPORARY DELETE THIS, SEND CONFIRMATION AT THE SUMMARY INSTEAD
-        bio.seek(0)
-        await update.message.reply_photo(photo=bio, caption="**Foto Evidence**")
+        # bio.seek(0)
+        # await update.message.reply_photo(photo=bio, caption="**Foto Evidence**")
         await self._process_final_data(update, session)
 
     async def _process_final_data(self, query_or_update, session):
@@ -663,10 +665,12 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
             # This is a callback query
             send_message = query_or_update.message.reply_text
             edit_message = query_or_update.message.edit_text
+            reply_photo = query_or_update.message.reply_photo
             user_id = query_or_update.from_user.id
         else:
             # This is a regular update
             send_message = query_or_update.message.reply_text
+            reply_photo = query_or_update.message.reply_photo
             edit_message = None
             user_id = query_or_update.effective_user.id
         
@@ -694,7 +698,13 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 • **Deal Bundling:** {data.get('deal_bundling', '-')}
         """
         
-        await send_message(summary, parse_mode='Markdown')
+        image_bytes = base64.b64decode(data.pop('foto_evidence'))
+
+        image_file = BytesIO(image_bytes)
+        image_file.name = "confirm.jpg"
+        image_file.seek(0)
+
+        await reply_photo(photo=image_file, caption=summary, parse_mode='Markdown')
         
         # Third bubble - saving status
         saving_msg = "⏳ **Menyimpan ke Google Sheet...**"
@@ -702,9 +712,6 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         try:
             # Upload image to google drive
-            image_bytes = base64.b64decode(data.pop('foto_evidence'))
-
-            image_file = BytesIO(image_bytes)
             image_file_name = f'{data.get('kode_sa')}_{data.get('tanggal')}_{data.get('kegiatan')}.jpg'
 
             image_link = self.googleservices.upload_to_drive(image_file, image_file_name)
@@ -827,6 +834,7 @@ Error: {message}
             ConversationState.TELEPON_PIC: "Menunggu Nomor HP PIC",
             ConversationState.PAKET_DEAL: "Menunggu Deal Paket",
             ConversationState.DEAL_BUNDLING: "Menunggu Deal Bundling",
+            ConversationState.FOTO_EVIDENCE: "Menunggu Upload Foto Evidence",
             ConversationState.COMPLETED: "Data Lengkap"
         }
         
@@ -859,8 +867,9 @@ Error: {message}
             'nama_pic': 'Nama PIC Pelanggan',
             'jabatan_pic': 'Jabatan PIC',
             'telepon_pic': 'Nomor HP PIC',
-            'paket': 'Deal Paket',
-            'bundle': 'Deal Bundling'
+            'paket_deal': 'Deal Paket',
+            'deal_bundling': 'Deal Bundling',
+            'foto_evidence': 'Foto Evidence Visit'
         }
         
         for key, label in field_labels.items():
