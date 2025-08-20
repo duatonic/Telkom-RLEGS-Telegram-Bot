@@ -91,6 +91,9 @@ class ConversationHandler:
             
         elif session.state == ConversationState.TELEPON_PIC:
             await self._handle_telepon_pic(update, session, user_message)
+
+        elif session.state == ConversationState.TENANT:
+            await self._handle_tenant(update, session, user_message)
         
         elif session.state == ConversationState.IDLE:
             # User belum start conversation - show welcome with buttons
@@ -272,7 +275,8 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Second bubble - next step
         next_step = f"""
-**6.** Masukkan **Tanggal Visit** (format: DD/MM/YYYY):
+**6.** Masukkan **Tanggal Visit**: 
+(format: DD/MM/YYYY, DD-MM-YYYY, atau DD MM YYYY)
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
@@ -335,15 +339,40 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and move to next step
         session.add_data('kategori', selected_category)
-        session.set_state(ConversationState.KEGIATAN)
+        session.set_state(ConversationState.TENANT)
         
         # Confirmation message
         confirmation = f"✅ **Kategori Pelanggan:** {selected_category}"
         await query.message.reply_text(confirmation, parse_mode='Markdown')
 
+        # Second bubble - next step
+        next_step = f"""
+**8.** Masukkan **Nama Tenant / Desa / Puskesmas / Kecamatan yang divisit**:
+        """
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown')
+    
+    async def _handle_tenant(self, update, session, tenant):
+        """Handle Nama Tenant input"""
+        is_valid, result = self.validator.validate_tenant(tenant)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                f"❌ {result}\n\n Silakan masukkan Nama Tenant / Desa / Puskesmas / Kecamatan yang benar:"
+            )
+            return
+        
+        # Save data and move to next step
+        session.add_data('tenant', result)
+        session.set_state(ConversationState.KEGIATAN)
+        
+        # First bubble - confirmation
+        confirmation = f"✅ **Nama Tenant / Desa / Puskesmas / Kecamatan:** {result}"
+        await update.message.reply_text(confirmation, parse_mode='Markdown')
+
         # Continue to next step
         next_step = f"""
-**8.** Pilih **Kegiatan**:
+**9.** Pilih **Kegiatan**:
         """
         # Create keyboard with 2 Kategori Kegiatan options
         keyboard = [
@@ -352,7 +381,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        await update.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
     
     async def handle_kegiatan_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle Kategori Kegiatan selection dari inline keyboard"""
@@ -384,7 +413,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Continue to next step
         next_step = f"""
-**9.** Pilih **Layanan yang digunakan saat ini**:
+**10.** Pilih **Layanan yang digunakan saat ini**:
         """
         # Create keyboard with 3 Tipe Layanan options
         keyboard = [
@@ -427,7 +456,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Continue to next step
         next_step = f"""
-**10.** Pilih **Tarif Layanan saat ini**:
+**11.** Pilih **Tarif Layanan saat ini**:
         """
         # Create keyboard with 3 Tarif Layanan options
         keyboard = [
@@ -470,7 +499,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Second bubble - next step
         next_step = f"""
-**11.** Masukkan **Nama PIC Pelanggan**:
+**12.** Masukkan **Nama PIC Pelanggan**:
         """
         
         await query.message.reply_text(next_step, parse_mode='Markdown')
@@ -495,7 +524,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Second bubble - next step
         next_step = f"""
-**12.** Masukkan **Jabatan PIC**:
+**13.** Masukkan **Jabatan PIC**:
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
@@ -520,7 +549,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Second bubble - next step
         next_step = f"""
-**13.** Masukkan **Nomor HP PIC**:
+**14.** Masukkan **Nomor HP PIC**:
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
@@ -545,7 +574,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Continue to next step
         next_step = f"""
-**14.** Jika Anda melakukan **Dealing, pilih salah satu deal paket Mbps**:
+**15.** Jika Anda melakukan **Dealing, pilih salah satu deal paket Mbps**:
         """
         # Create keyboard with 4 Dealing Paket options
         keyboard = [
@@ -590,7 +619,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Continue to next step
         next_step = f"""
-**15.** Pilih salah satu dealing **layanan bundling**:
+**16.** Pilih salah satu dealing **layanan bundling**:
         """
         # Create keyboard with 4 Dealing Bundling options
         keyboard = [
@@ -634,7 +663,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         session.set_state(ConversationState.FOTO_EVIDENCE)
         
         next_step = f"""
-**16. Upload Foto Evidence Visit:**:
+**17. Upload Foto Evidence Visit**:
         """
         
         await query.message.reply_text(next_step, parse_mode='Markdown')
@@ -689,6 +718,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 • **Tanggal:** {data.get('tanggal', '-')}
 • **Kategori Pelanggan:** {data.get('kategori', '-')}
 • **Kegiatan:** {data.get('kegiatan', '-')}
+• **Nama Tenant:** {data.get('tenant', '-')}
 • **Tipe Layanan:** {data.get('layanan', '-')}
 • **Tarif Layanan:** {data.get('tarif', '-')}
 • **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
@@ -827,6 +857,7 @@ Error: {message}
             ConversationState.WAITING_TANGGAL: "Menunggu Tanggal",
             ConversationState.WAITING_KATEGORI: "Menunggu Pilihan Kategori",
             ConversationState.KEGIATAN: "Menunggu Pilihan Kegiatan",
+            ConversationState.TENANT: "Menunggu Pilihan Tenant",
             ConversationState.LAYANAN: "Menunggu Pilihan Layanan",
             ConversationState.TARIF: "Menunggu Pilihan Tarif",
             ConversationState.NAMA_PIC: "Menunggu Nama PIC Pelanggan",
@@ -862,6 +893,7 @@ Error: {message}
             'tanggal': 'Tanggal',
             'kategori': 'Kategori Pelanggan',
             'kegiatan': 'Kegiatan',
+            'tenant' : 'Nama Tenant',
             'layanan': 'Tipe Layanan',
             'tarif': 'Tarif Layanan',
             'nama_pic': 'Nama PIC Pelanggan',
@@ -965,6 +997,7 @@ Error: {message}
 • Tanggal Visit
 • Kategori Pelanggan (4 pilihan)
 • Kegiatan (2 pilihan)
+• Nama Tenant
 • Tipe Layanan (3 pilihan)
 • Tarif Layanan (3 pilihan)
 • Nama PIC Pelanggan

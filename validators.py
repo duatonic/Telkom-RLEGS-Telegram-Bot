@@ -15,12 +15,6 @@ class DataValidator:
             
         kode = kode.strip().upper()
         
-        # Pattern: SA + 3-6 digit angka
-        pattern = r'^SA\d{3,6}$'
-        
-        if not re.match(pattern, kode):
-            return False, "Format Kode SA tidak valid. Gunakan format: SA001, SA1234, dll."
-        
         logger.info(f"Kode SA validated: {kode}")
         return True, kode  # Return cleaned version
     
@@ -47,37 +41,45 @@ class DataValidator:
     
     @staticmethod
     def validate_telepon(telepon):
-        """Validasi No. Telepon"""
+        """Validasi No. Telepon """
         if not telepon:
             return False, "Nomor telepon tidak boleh kosong"
-            
+        
         # Remove all non-digits first untuk checking
         clean_phone = re.sub(r'\D', '', telepon)
         original = telepon.strip()
         
-        # Indonesian phone patterns
+        # Indonesian phone patterns dengan prefix yang valid
         patterns = [
-            r'^08\d{8,11}$',           # 08xx format
-            r'^628\d{8,11}$',          # 628xx format  
-            r'^\+628\d{8,11}$'         # +628xx format
+            r'^08[1-9]\d{7,10}$',      # 08xx format (081x, 082x, dst - bukan 080x)
+            r'^628[1-9]\d{7,10}$',     # 628xx format  
+            r'^\+628[1-9]\d{7,10}$'    # +628xx format
         ]
         
-        # Check original format first
+        # Check original format first (dengan spasi dan dash dihilangkan)
         clean_original = original.replace(' ', '').replace('-', '')
         for pattern in patterns:
             if re.match(pattern, clean_original):
                 logger.info(f"Phone validated (original format): {original}")
                 return True, original
         
-        # Auto-format if looks like Indonesian number
+        # Auto-format hanya jika nomor dimulai dengan digit yang valid untuk Indonesia
         if len(clean_phone) >= 10:
-            if clean_phone.startswith('8'):
+            # Jika dimulai dengan 8, tambahkan 0 di depan (misal: 81234567890 -> 081234567890)
+            if clean_phone.startswith('8') and clean_phone[1] in '123456789':
                 formatted = '0' + clean_phone
-                logger.info(f"Phone validated (auto-formatted): {formatted}")
-                return True, formatted
-            elif len(clean_phone) >= 10:
-                logger.info(f"Phone validated (clean): {clean_phone}")
-                return True, clean_phone
+                # Validasi ulang dengan pattern
+                for pattern in patterns:
+                    if re.match(pattern, formatted):
+                        logger.info(f"Phone validated (auto-formatted): {formatted}")
+                        return True, formatted
+            
+            # Jika sudah dimulai dengan 08, 628, cek apakah valid
+            elif clean_phone.startswith('08') or clean_phone.startswith('628'):
+                for pattern in patterns:
+                    if re.match(pattern, clean_phone):
+                        logger.info(f"Phone validated (clean): {clean_phone}")
+                        return True, clean_phone
         
         return False, "Format nomor telepon tidak valid. Contoh: 081234567890, +6281234567890"
     
@@ -123,22 +125,35 @@ class DataValidator:
     
     @staticmethod
     def validate_tanggal(tanggal):
-        """Validasi Tanggal dengan format DD/MM/YYYY"""
+        """Validasi Tanggal dengan format DD/MM/YYYY, DD-MM-YYYY, atau DD MM YYYY"""
         if not tanggal:
             return False, "Tanggal tidak boleh kosong"
             
         tanggal = tanggal.strip()
         
-        # Basic validation for date format
-        date_pattern = r'^(\d{1,2})/(\d{1,2})/(\d{4})$'
+        # Multiple date patterns
+        date_patterns = [
+            r'^(\d{1,2})/(\d{1,2})/(\d{4})$',    # DD/MM/YYYY
+            r'^(\d{1,2})-(\d{1,2})-(\d{4})$',    # DD-MM-YYYY  
+            r'^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$' # DD MM YYYY (satu atau lebih spasi)
+        ]
         
-        if not re.match(date_pattern, tanggal):
-            return False, "Format tanggal tidak valid. Gunakan format DD/MM/YYYY (contoh: 15/08/2025)"
+        day = month = year = None
+        matched_format = None
+        
+        # Try each pattern
+        for i, pattern in enumerate(date_patterns):
+            match = re.match(pattern, tanggal)
+            if match:
+                day, month, year = map(int, match.groups())
+                matched_format = ['DD/MM/YYYY', 'DD-MM-YYYY', 'DD MM YYYY'][i]
+                break
+        
+        if not matched_format:
+            return False, "Format tanggal tidak valid. Gunakan format DD/MM/YYYY, DD-MM-YYYY, atau DD MM YYYY (contoh: 15/08/2025, 15-08-2025, 15 08 2025)"
         
         # Additional date validation
         try:
-            day, month, year = map(int, tanggal.split('/'))
-            
             # Check basic ranges
             if not (1 <= day <= 31 and 1 <= month <= 12 and 2020 <= year <= 2030):
                 return False, "Tanggal tidak valid. Pastikan tanggal, bulan, dan tahun dalam rentang yang benar"
@@ -146,8 +161,11 @@ class DataValidator:
             # Try to create datetime object for more thorough validation
             datetime(year, month, day)
             
-            logger.info(f"Tanggal validated: {tanggal}")
-            return True, tanggal
+            # Normalize to DD/MM/YYYY format untuk konsistensi output
+            normalized_date = f"{day:02d}/{month:02d}/{year}"
+            
+            logger.info(f"Tanggal validated: {tanggal} -> normalized: {normalized_date}")
+            return True, normalized_date
             
         except ValueError as e:
             return False, f"Tanggal tidak valid: {str(e)}"
@@ -202,6 +220,27 @@ class DataValidator:
                 return True, keg
         
         return False, f"Kegiatan tidak valid. Pilihan: {', '.join(valid_kegiatan)}"
+    
+    @staticmethod
+    def validate_tenant(tenant):
+        """Validasi Tenant"""
+        if not tenant:
+            return False, "Tenant tidak boleh kosong"
+            
+        tenant = tenant.strip().title()  # Clean and format
+        
+        if len(tenant) < 3:
+            return False, "Nama Tenant terlalu pendek (minimal 3 karakter)"
+        
+        if len(tenant) > 50:
+            return False, "Nama Tenant terlalu panjang (maksimal 50 karakter)"
+        
+        # Allow letters, spaces, and some common characters
+        if not re.match(r"^[a-zA-Z\s\.\-]+$", tenant):
+            return False, "Tenant hanya boleh mengandung huruf, spasi, titik, dan tanda hubung"
+        
+        logger.info(f"Tenant validated: {tenant}")
+        return True, tenant
     
     @staticmethod
     def validate_layanan(layanan):
@@ -313,7 +352,7 @@ class DataValidator:
     
     @staticmethod
     def validate_telepon_pic(telepon_pic):
-        """Validasi Nomor HP PIC (Person In Charge) - sama dengan validate_telepon"""
+        """Validasi Nomor HP PIC """
         if not telepon_pic:
             return False, "Nomor HP PIC tidak boleh kosong"
             
@@ -321,29 +360,37 @@ class DataValidator:
         clean_phone = re.sub(r'\D', '', telepon_pic)
         original = telepon_pic.strip()
         
-        # Indonesian phone patterns
+        # Indonesian phone patterns dengan prefix yang valid
         patterns = [
-            r'^08\d{8,11}$',           # 08xx format
-            r'^628\d{8,11}$',          # 628xx format  
-            r'^\+628\d{8,11}$'         # +628xx format
+            r'^08[1-9]\d{7,10}$',      # 08xx format (081x, 082x, dst - bukan 080x)
+            r'^628[1-9]\d{7,10}$',     # 628xx format  
+            r'^\+628[1-9]\d{7,10}$'    # +628xx format
         ]
         
-        # Check original format first
+        # Check original format first (dengan spasi dan dash dihilangkan)
         clean_original = original.replace(' ', '').replace('-', '')
         for pattern in patterns:
             if re.match(pattern, clean_original):
                 logger.info(f"Phone PIC validated (original format): {original}")
                 return True, original
         
-        # Auto-format if looks like Indonesian number
+        # Auto-format hanya jika nomor dimulai dengan digit yang valid untuk Indonesia
         if len(clean_phone) >= 10:
-            if clean_phone.startswith('8'):
+            # Jika dimulai dengan 8, tambahkan 0 di depan (misal: 81234567890 -> 081234567890)
+            if clean_phone.startswith('8') and clean_phone[1] in '123456789':
                 formatted = '0' + clean_phone
-                logger.info(f"Phone PIC validated (auto-formatted): {formatted}")
-                return True, formatted
-            elif len(clean_phone) >= 10:
-                logger.info(f"Phone PIC validated (clean): {clean_phone}")
-                return True, clean_phone
+                # Validasi ulang dengan pattern
+                for pattern in patterns:
+                    if re.match(pattern, formatted):
+                        logger.info(f"Phone PIC validated (auto-formatted): {formatted}")
+                        return True, formatted
+            
+            # Jika sudah dimulai dengan 08, 628, cek apakah valid
+            elif clean_phone.startswith('08') or clean_phone.startswith('628'):
+                for pattern in patterns:
+                    if re.match(pattern, clean_phone):
+                        logger.info(f"Phone PIC validated (clean): {clean_phone}")
+                        return True, clean_phone
         
         return False, "Format nomor HP PIC tidak valid. Contoh: 081234567890, +6281234567890"
     

@@ -11,6 +11,7 @@ class ConversationState(Enum):
     WAITING_TANGGAL = "waiting_tanggal"
     WAITING_KATEGORI = "waiting_kategori"
     KEGIATAN = "waiting_kegiatan"
+    TENANT =    "waiting_tenant"
     LAYANAN = "waiting_layanan"
     TARIF = "waiting_tarif"
     NAMA_PIC = "waiting_nama_pic"
@@ -41,6 +42,7 @@ class UserSession:
             'tanggal': None,
             'kategori': None,
             'kegiatan': None,
+            'tenant': None,
             'layanan': None,
             'tarif': None,
             'nama_pic': None,
@@ -74,6 +76,7 @@ class UserSession:
             'tanggal',
             'kategori',
             'kegiatan',
+            'tenant',
             'layanan',
             'tarif',
             'nama_pic',
