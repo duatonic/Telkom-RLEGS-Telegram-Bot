@@ -56,7 +56,7 @@ class GoogleService:
         else:
             logger.error(msg)
 
-        return msg
+        return status, msg
 
     def upload_to_drive(self, image, image_name):
         try:

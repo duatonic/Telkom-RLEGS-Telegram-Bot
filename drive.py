@@ -1,11 +1,9 @@
 import config
 import logging
 
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 
 logger = logging.getLogger(__name__)
-
-FILE_PATH = 'test_image.png'
 
 def upload(service, image, image_name):
     try:
@@ -14,7 +12,7 @@ def upload(service, image, image_name):
             'parents': [config.DRIVE_FOLDER_ID]
         }
 
-        media = MediaFileUpload(image, mimetype='image/png', resumable=True)
+        media = MediaIoBaseUpload(image, mimetype='image/jpeg', resumable=True)
         
         logger.info(f"uploading {image_name} to Google Drive folder...")
         file = service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()

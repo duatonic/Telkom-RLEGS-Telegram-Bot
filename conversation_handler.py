@@ -3,8 +3,11 @@ from telegram.ext import ContextTypes
 from session_manager import SessionManager
 from conversation_states import ConversationState
 from validators import DataValidator
-from google_docs_simple import SimpleGoogleDocs
 import logging
+from io import BytesIO
+import base64
+from googleservice import GoogleService
+
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +17,7 @@ class ConversationHandler:
     def __init__(self):
         self.session_manager = SessionManager()
         self.validator = DataValidator()
-        self.docs_handler = SimpleGoogleDocs()
+        self.googleservices = GoogleService()
     
     async def start_conversation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start new conversation - bisa dari command atau callback"""
@@ -32,7 +35,10 @@ class ConversationHandler:
         # Reset any existing session
         self.session_manager.reset_session(user_id)
         session = self.session_manager.get_session(user_id)
-        
+
+        self.googleservices.authenticate()
+        self.googleservices.build_services()
+
         # Set state to waiting for Kode SA
         session.set_state(ConversationState.WAITING_KODE_SA)
         
@@ -45,6 +51,16 @@ class ConversationHandler:
         await send_message(welcome_message, parse_mode='Markdown')
         logger.info(f"Started conversation for user {user_id} ({user_name})")
     
+    async def handle_image(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        photo = update.message.photo[-1]
+        
+        session = self.session_manager.get_session(user_id)
+
+        if session.state == ConversationState.FOTO_EVIDENCE:
+            await self._handle_image(update, session, photo)
+
+
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming message based on conversation state"""
         user_id = update.effective_user.id
@@ -130,6 +146,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         """
         
         await update.message.reply_text(next_step, parse_mode='Markdown')
+    
     
     async def _handle_nama(self, update, session, nama):
         """Handle Nama input"""
@@ -566,7 +583,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         await query.message.reply_text(confirmation, parse_mode='Markdown')
         
         # Save data with correct key
-        session.add_data('paket', selected_paket)
+        session.add_data('paket_deal', selected_paket)
         session.set_state(ConversationState.DEAL_BUNDLING)
 
         # Continue to next step
@@ -611,18 +628,38 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         await query.message.reply_text(confirmation, parse_mode='Markdown')
         
         # Save data with correct key
-        session.add_data('bundle', selected_bundle)
+        session.add_data('deal_bundling', selected_bundle)
+        session.set_state(ConversationState.FOTO_EVIDENCE)
+        
+        next_step = f"""
+**16. Upload Foto Evidence Visit:**:
+        """
+        
+        await query.message.reply_text(next_step, parse_mode='Markdown')
+
+    async def _handle_image(self, update, session, photo):
+        photo_file = await photo.get_file()
+        
+        bio = BytesIO()
+        await photo_file.download_to_memory(out=bio)
+
+        bio.seek(0)
+        encoded_image = base64.b64encode(bio.read()).decode('utf-8')
+
+        session.add_data('foto_evidence', encoded_image)
         session.set_state(ConversationState.COMPLETED)
         
-        # Process final data
-        await self._process_final_data(query, session)
-    
+        # TEMPORARY DELETE THIS, SEND CONFIRMATION AT THE SUMMARY INSTEAD
+        bio.seek(0)
+        await update.message.reply_photo(photo=bio, caption="**Foto Evidence**")
+        await self._process_final_data(update, session)
+
     async def _process_final_data(self, query_or_update, session):
         """Process final data and save to Google Docs"""
         data = session.data
         
         # Handle both callback query and regular update
-        if hasattr(query_or_update, 'message'):
+        if hasattr(query_or_update, 'from_user'):
             # This is a callback query
             send_message = query_or_update.message.reply_text
             edit_message = query_or_update.message.edit_text
@@ -653,36 +690,32 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 • **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
 • **Jabatan PIC:** {data.get('jabatan_pic', '-')}
 • **Nomor HP PIC:** {data.get('telepon_pic', '-')}
-• **Deal Paket:** {data.get('paket', '-')}
-• **Deal Bundling:** {data.get('bundle', '-')}
+• **Deal Paket:** {data.get('paket_deal', '-')}
+• **Deal Bundling:** {data.get('deal_bundling', '-')}
         """
         
         await send_message(summary, parse_mode='Markdown')
         
         # Third bubble - saving status
-        saving_msg = "⏳ **Menyimpan ke Google Docs...**"
+        saving_msg = "⏳ **Menyimpan ke Google Sheet...**"
         status_msg = await send_message(saving_msg, parse_mode='Markdown')
         
         try:
-            # Save to Google Docs with ALL parameters
-            success, message = self.docs_handler.add_data_complete(
-                data.get('kode_sa', ''), 
-                data.get('nama', ''), 
-                data.get('no_telp', ''), 
-                data.get('witel', ''),
-                data.get('telda', ''),
-                data.get('tanggal', ''),
-                data.get('kategori', ''),
-                data.get('kegiatan', ''),
-                data.get('layanan', ''),
-                data.get('tarif', ''),
-                data.get('nama_pic', ''),
-                data.get('jabatan_pic', ''),
-                data.get('telepon_pic', ''),
-                data.get('paket', ''),
-                data.get('bundle', '')
-            )
-            
+            # Upload image to google drive
+            image_bytes = base64.b64decode(data.pop('foto_evidence'))
+
+            image_file = BytesIO(image_bytes)
+            image_file_name = f'{data.get('kode_sa')}_{data.get('tanggal')}_{data.get('kegiatan')}.jpg'
+
+            image_link = self.googleservices.upload_to_drive(image_file, image_file_name)
+            data['foto_evidence'] = image_link
+
+            # Append link to submission data
+            data_to_submit = list(data.values())
+            logger.info(f"Data to submit: {data_to_submit}")
+
+            success, message = self.googleservices.append_to_sheet([data_to_submit])
+                        
             if success:
                 # Success with menu buttons
                 keyboard = [

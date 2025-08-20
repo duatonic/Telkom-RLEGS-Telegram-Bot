@@ -23,5 +23,4 @@ class SessionManager:
     
     def get_active_sessions_count(self):
         """Get number of active sessions"""
-        return len([s for s in self.sessions.values() 
-                   if s.state != ConversationState.IDLE])
+        return len([s for s in self.sessions.values() if s.state != ConversationState.IDLE])

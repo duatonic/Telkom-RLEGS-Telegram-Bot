@@ -3,6 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from conversation_handler import ConversationHandler
 import config
+from io import BytesIO
 
 user_forms = {}
 
@@ -89,37 +90,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown',
         reply_markup=reply_markup
     )
-
-async def process_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Process data dari user message"""
-    try:
-        chat_id = update.message.chat_id
-        user_text = update.message.text
-        user_name = update.effective_user.first_name
-        
-        if chat_id not in user_forms:
-            await update.message.reply_text("please use /start to begin.")
-            return
-        
-        form = user_forms[chat_id]
-        current_field = form._next_empty()
-
-        setattr(form, current_field, user_text.strip())
-        logger.info(f"User {user_name} input: {current_field} = {user_text.strip()}")
-
-        # TODO: Handle case where all fields are filled
-        if form._next_empty() is None:
-            await update.message.reply_text("❗ Semua data sudah lengkap. Gunakan /start untuk mengulang.")
-            return
-        
-        await update.message.reply_text(f"Masukkan data {form._next_empty()}", parse_mode='Markdown')
-
-    except Exception as e:
-        logger.error(f"Error processing data: {e}")
-        await update.message.reply_text(
-            "❌ **Terjadi kesalahan sistem.**\n\nSilakan coba lagi nanti.",
-            parse_mode='Markdown'
-        )
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle inline keyboard button presses"""
@@ -250,11 +220,9 @@ async def welcome_new_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # User is in conversation, handle normally
         await conversation_handler.handle_message(update, context)
 
+
 def main():
     """Main function"""
-    # Initialize Google Docs
-    conversation_handler.docs_handler.init_document()
-    
     # Create application
     application = Application.builder().token(config.TELEGRAM_TOKEN).build()
     
@@ -266,7 +234,8 @@ def main():
     application.add_handler(CommandHandler("status", conversation_handler.show_status))
     application.add_handler(CommandHandler("cancel", conversation_handler.cancel_conversation))
     application.add_handler(CommandHandler("help", help_command))
-    
+    application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_image))
+
     # Handle all text messages - welcome new users or continue conversation
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, welcome_new_users)
