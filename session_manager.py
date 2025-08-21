@@ -4,7 +4,6 @@ class SessionManager:
     """Manager untuk handle multiple user sessions"""
     def __init__(self):
         self.sessions = {}  # user_id -> UserSession
-        self.history = []
     
     def get_session(self, user_id):
         """Get or create session for user"""

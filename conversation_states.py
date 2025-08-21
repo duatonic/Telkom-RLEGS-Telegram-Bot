@@ -28,8 +28,9 @@ class UserSession:
         self.user_id = user_id
         self.state = ConversationState.IDLE
         self.data = {}
+        self.history = []
         self.reset()
-    
+
     def reset(self):
         """Reset session data"""
         self.state = ConversationState.IDLE
