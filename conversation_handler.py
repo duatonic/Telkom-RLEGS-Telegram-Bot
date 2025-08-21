@@ -18,6 +18,7 @@ class ConversationHandler:
         self.session_manager = SessionManager()
         self.validator = DataValidator()
         self.googleservices = GoogleService()
+        self.stack_history = []
     
     async def start_conversation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start new conversation - bisa dari command atau callback"""
@@ -57,9 +58,141 @@ class ConversationHandler:
         
         session = self.session_manager.get_session(user_id)
 
-        if session.state == ConversationState.FOTO_EVIDENCE:
+        if session.state == ConversationState.WAITING_FOTO_EVIDENCE:
             await self._handle_image(update, session, photo)
+    
 
+    # There is a way to merge button_callback and handle_message update is reset for each interaction, in text callback_query is None and in button, message is None. Use that as the saving grace
+    async def handle_interaction(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+        elif update.message:
+            if update.message.text:
+                query = update.message.text.strip()
+            elif update.message.photo:
+                query = update.message.photo[-1]
+
+        handler_dict = {
+            ConversationState.IDLE: self._show_welcome_menu,
+            ConversationState.WAITING_KODE_SA: self._handle_kode_sa,
+            ConversationState.WAITING_NAMA: self._handle_nama,
+            ConversationState.WAITING_TELEPON: self._handle_telepon,
+            ConversationState.WAITING_WITEL: self._handle_witel,
+            ConversationState.WAITING_TELDA: self._handle_telda,
+            ConversationState.WAITING_TANGGAL: self._handle_tanggal,
+            ConversationState.WAITING_KATEGORI: self._handle_kategori,
+            ConversationState.WAITING_KEGIATAN: self._handle_kegiatan,
+            ConversationState.WAITING_TENANT: self._handle_tenant,
+            ConversationState.WAITING_LAYANAN: self._handle_layanan,
+            ConversationState.WAITING_TARIF: self._handle_tarif,
+            ConversationState.WAITING_NAMA_PIC: self._handle_nama_pic,
+            ConversationState.WAITING_JABATAN_PIC: self._handle_jabatan_pic,
+            ConversationState.WAITING_TELEPON_PIC: self._handle_telepon_pic,
+            ConversationState.WAITING_PAKET_DEAL: self._handle_paket_deal,
+            ConversationState.WAITING_DEAL_BUNDLING: self._handle_deal_bundling,
+            ConversationState.WAITING_FOTO_EVIDENCE: self._handle_foto_evidence
+        }
+
+    async def button_callbacks(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle inline keyboard button presses"""
+        query = update.callback_query
+        await query.answer()  # Acknowledge the callback
+        
+        # Handle Witel selection buttons 
+        if query.data.startswith('witel_'):
+            await self.handle_witel_selection(update, context)
+            return
+        
+        # Handle Kategori selection buttons 
+        if query.data.startswith('kategori_'):
+            await self.handle_kategori_selection(update, context)
+            return
+        
+        # Handle Kegiatan selection buttons
+        if query.data.startswith('kegiatan_'):
+            await self.handle_kegiatan_selection(update, context)
+            return
+        
+        # Handle Layanan selection buttons
+        if query.data.startswith('layanan_'):
+            await self.handle_layanan_selection(update, context)
+            return
+        
+        # Handle Tarif selection buttons
+        if query.data.startswith('tarif_'):
+            await self.handle_tarif_selection(update, context)
+            return
+        
+        # Handle Paket selection buttons
+        if query.data.startswith('paket_'):
+            await self.handle_paket_selection(update, context)
+            return
+        
+        # Handle Deal Bundling selection buttons
+        if query.data.startswith('deal_'):
+            await self.handle_bundle_selection(update, context)
+            return
+        
+        if query.data == 'start_input':
+            # Start input data process
+            await self.start_conversation(update, context)
+            
+        elif query.data == 'show_status':
+            # Show current status
+            await self.show_status(update, context)
+            
+        elif query.data == 'show_help':
+            # Show help with back button
+            help_text = """
+🤖 **Bot Rekap Data RLEGS - Panduan**
+
+📝 **Fitur Utama:**
+• Input data step-by-step dengan validasi otomatis
+• Penyimpanan otomatis ke Google Docs
+• Status tracking progress input
+• Cancel anytime dengan /cancel
+
+🔄 **Alur Input (15 Step):**
+1️⃣ Kode SA (contoh: SA001)
+2️⃣ Nama Lengkap
+3️⃣ No. Telepon  
+4️⃣ Witel
+5️⃣ Telkom Daerah
+6️⃣ Tanggal
+7️⃣ Kategori Pelanggan
+8️⃣ Kegiatan
+9️⃣ Tipe Layanan
+🔟 Tarif Layanan
+1️⃣1️⃣ Nama PIC Pelanggan
+1️⃣2️⃣ Jabatan PIC
+1️⃣3️⃣ Nomor HP PIC
+1️⃣4️⃣ Deal Paket
+1️⃣5️⃣ Deal Bundling
+
+⚡ **Tips:**
+- Gunakan button untuk navigasi mudah
+- Data divalidasi real-time
+- Bisa batalkan dengan /cancel
+- Lihat progress dengan button Status
+
+💾 **Data tersimpan otomatis ke Google Docs**
+            """
+            
+            keyboard = [
+                [InlineKeyboardButton("🏠 Kembali ke Menu", callback_data='back_to_menu')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                help_text, 
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+            
+        elif query.data == 'back_to_menu':
+            # Back to main menu
+            await self.handle_back_to_menu(update, context)
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming message based on conversation state"""
@@ -67,7 +200,7 @@ class ConversationHandler:
         user_message = update.message.text.strip()
         
         session = self.session_manager.get_session(user_id)
-        
+
         if session.state == ConversationState.WAITING_KODE_SA:
             await self._handle_kode_sa(update, session, user_message)
         
@@ -83,16 +216,16 @@ class ConversationHandler:
         elif session.state == ConversationState.WAITING_TANGGAL:
             await self._handle_tanggal(update, session, user_message)
         
-        elif session.state == ConversationState.NAMA_PIC:
+        elif session.state == ConversationState.WAITING_NAMA_PIC:
             await self._handle_nama_pic(update, session, user_message)
 
-        elif session.state == ConversationState.JABATAN_PIC:
+        elif session.state == ConversationState.WAITING_JABATAN_PIC:
             await self._handle_jabatan_pic(update, session, user_message)
             
-        elif session.state == ConversationState.TELEPON_PIC:
+        elif session.state == ConversationState.WAITING_TELEPON_PIC:
             await self._handle_telepon_pic(update, session, user_message)
 
-        elif session.state == ConversationState.TENANT:
+        elif session.state == ConversationState.WAITING_TENANT:
             await self._handle_tenant(update, session, user_message)
         
         elif session.state == ConversationState.IDLE:
@@ -339,7 +472,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and move to next step
         session.add_data('kategori', selected_category)
-        session.set_state(ConversationState.TENANT)
+        session.set_state(ConversationState.WAITING_TENANT)
         
         # Confirmation message
         confirmation = f"✅ **Kategori Pelanggan:** {selected_category}"
@@ -364,7 +497,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and move to next step
         session.add_data('tenant', result)
-        session.set_state(ConversationState.KEGIATAN)
+        session.set_state(ConversationState.WAITING_KEGIATAN)
         
         # First bubble - confirmation
         confirmation = f"✅ **Nama Tenant / Desa / Puskesmas / Kecamatan:** {result}"
@@ -409,7 +542,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data with correct key
         session.add_data('kegiatan', selected_kegiatan)
-        session.set_state(ConversationState.LAYANAN)
+        session.set_state(ConversationState.WAITING_LAYANAN)
 
         # Continue to next step
         next_step = f"""
@@ -452,7 +585,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data with correct key
         session.add_data('layanan', selected_layanan)
-        session.set_state(ConversationState.TARIF)
+        session.set_state(ConversationState.WAITING_TARIF)
 
         # Continue to next step
         next_step = f"""
@@ -495,7 +628,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data with correct key
         session.add_data('tarif', selected_tarif)
-        session.set_state(ConversationState.NAMA_PIC)
+        session.set_state(ConversationState.WAITING_NAMA_PIC)
 
         # Second bubble - next step
         next_step = f"""
@@ -516,7 +649,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and move to next step
         session.add_data('nama_pic', result)
-        session.set_state(ConversationState.JABATAN_PIC)
+        session.set_state(ConversationState.WAITING_JABATAN_PIC)
         
         # First bubble - confirmation
         confirmation = f"✅ **Nama PIC Pelanggan:** {result}"
@@ -541,7 +674,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and move to next step
         session.add_data('jabatan_pic', result)
-        session.set_state(ConversationState.TELEPON_PIC)
+        session.set_state(ConversationState.WAITING_TELEPON_PIC)
         
         # First bubble - confirmation
         confirmation = f"✅ **Jabatan PIC:** {result}"
@@ -566,7 +699,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data and complete the process
         session.add_data('telepon_pic', result)
-        session.set_state(ConversationState.PAKET_DEAL)
+        session.set_state(ConversationState.WAITING_PAKET_DEAL)
         
         # First bubble - confirmation
         confirmation = f"✅ **Nomor HP PIC:** {result}"
@@ -615,7 +748,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data with correct key
         session.add_data('paket_deal', selected_paket)
-        session.set_state(ConversationState.DEAL_BUNDLING)
+        session.set_state(ConversationState.WAITING_DEAL_BUNDLING)
 
         # Continue to next step
         next_step = f"""
@@ -660,7 +793,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
         
         # Save data with correct key
         session.add_data('deal_bundling', selected_bundle)
-        session.set_state(ConversationState.FOTO_EVIDENCE)
+        session.set_state(ConversationState.WAITING_FOTO_EVIDENCE)
         
         next_step = f"""
 **17. Upload Foto Evidence Visit**:
@@ -856,16 +989,16 @@ Error: {message}
             ConversationState.WAITING_TELDA: "Menunggu Telkom Daerah",
             ConversationState.WAITING_TANGGAL: "Menunggu Tanggal",
             ConversationState.WAITING_KATEGORI: "Menunggu Pilihan Kategori",
-            ConversationState.KEGIATAN: "Menunggu Pilihan Kegiatan",
-            ConversationState.TENANT: "Menunggu Pilihan Tenant",
-            ConversationState.LAYANAN: "Menunggu Pilihan Layanan",
-            ConversationState.TARIF: "Menunggu Pilihan Tarif",
-            ConversationState.NAMA_PIC: "Menunggu Nama PIC Pelanggan",
-            ConversationState.JABATAN_PIC: "Menunggu Jabatan PIC",
-            ConversationState.TELEPON_PIC: "Menunggu Nomor HP PIC",
-            ConversationState.PAKET_DEAL: "Menunggu Deal Paket",
-            ConversationState.DEAL_BUNDLING: "Menunggu Deal Bundling",
-            ConversationState.FOTO_EVIDENCE: "Menunggu Upload Foto Evidence",
+            ConversationState.WAITING_KEGIATAN: "Menunggu Pilihan Kegiatan",
+            ConversationState.WAITING_TENANT: "Menunggu Pilihan Tenant",
+            ConversationState.WAITING_LAYANAN: "Menunggu Pilihan Layanan",
+            ConversationState.WAITING_TARIF: "Menunggu Pilihan Tarif",
+            ConversationState.WAITING_NAMA_PIC: "Menunggu Nama PIC Pelanggan",
+            ConversationState.WAITING_JABATAN_PIC: "Menunggu Jabatan PIC",
+            ConversationState.WAITING_TELEPON_PIC: "Menunggu Nomor HP PIC",
+            ConversationState.WAITING_PAKET_DEAL: "Menunggu Deal Paket",
+            ConversationState.WAITING_DEAL_BUNDLING: "Menunggu Deal Bundling",
+            ConversationState.WAITING_FOTO_EVIDENCE: "Menunggu Upload Foto Evidence",
             ConversationState.COMPLETED: "Data Lengkap"
         }
         
