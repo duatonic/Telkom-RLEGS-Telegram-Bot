@@ -1141,7 +1141,6 @@ Error: {message}
 
 📋 **Commands Tersedia:**
 /start - Mulai/restart bot
-/status - Lihat progress saat ini
 /cancel - Batalkan input data
 /help - Tampilkan bantuan ini
 
