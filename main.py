@@ -45,38 +45,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help command with inline keyboard"""
     help_text = """
-🤖 **Bot Rekap Data RLEGS - Panduan**
+🤖 *Panduan Bot Rekapitulasi*
 
-📝 **Commands:**
-- `/start` - Menu utama bot
-- `/status` - Lihat progress saat ini
-- `/cancel` - Batalkan input yang sedang berjalan
-- `/help` - Tampilkan panduan ini
-
-🔄 **Alur Input (15 Step):**
-1️⃣ Kode SA (contoh: SA001)
-2️⃣ Nama Lengkap
-3️⃣ No. Telepon
-4️⃣ Witel
-5️⃣ Telkom Daerah
-6️⃣ Tanggal
-7️⃣ Kategori Pelanggan
-8️⃣ Kegiatan
-9️⃣ Tipe Layanan
-🔟 Tarif Layanan
-1️⃣1️⃣ Nama PIC Pelanggan
-1️⃣2️⃣ Jabatan PIC
-1️⃣3️⃣ Nomor HP PIC
-1️⃣4️⃣ Deal Paket
-1️⃣5️⃣ Deal Bundling
-
-⚡ **Tips:**
-- Bot akan memandu step by step
-- Data otomatis divalidasi
-- Bisa batalkan kapan saja dengan /cancel
-- Gunakan button untuk navigasi yang mudah
-
-💾 **Data otomatis tersimpan ke Google Docs setelah lengkap**
+📝 *Perintah:*
+/start - Menu utama bot
+/cancel - Batalkan input yang sedang berjalan
+/help - Tampilkan panduan ini
     """
     
     # Create back button
@@ -91,6 +65,61 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button callbacks"""
+    query = update.callback_query
+    await query.answer()  # Answer the callback query to remove loading state
+    
+    # Handle different callback data
+    if query.data == 'show_help':
+        # Show help using the existing help function
+        help_text = """
+🤖 *Panduan Bot Rekapitulasi*
+
+📝 *Perintah:*
+/start - Menu utama bot
+/cancel - Batalkan input yang sedang berjalan
+/help - Tampilkan panduan ini
+    """
+        
+        keyboard = [
+            [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text=help_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+        
+    elif query.data == 'back_to_menu':
+        # Go back to main menu
+        user_name = update.effective_user.first_name
+        welcome_text = f"""
+**Halo *{user_name}*! ** 👋
+
+**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
+
+📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*    
+"""
+        
+        keyboard = [
+            [InlineKeyboardButton("Start", callback_data='start_input')],
+            [InlineKeyboardButton("Help", callback_data='show_help')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text=welcome_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+        
+    elif query.data == 'start_input':
+        # Forward to conversation handler untuk memulai input data
+        await conversation_handler.handle_interactions(update, context)
+
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle unknown commands with helpful response"""
     keyboard = [
@@ -100,8 +129,12 @@ async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_T
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "❓ **Command tidak dikenal**\n\n"
-        "Gunakan button di bawah untuk navigasi:",
+        "*Command tidak dikenal*\n\n"
+        "Command yang dikenali sistem: \n"
+        "/start \n"
+        "/cancel \n"
+        "/help \n\n"
+        "Atau gunakan button di bawah untuk navigasi:",
         parse_mode='Markdown',
         reply_markup=reply_markup
     )
@@ -124,28 +157,21 @@ def main():
     # Create application
     application = Application.builder().token(config.TELEGRAM_TOKEN).build()
     
-    # Add callback query handler for inline keyboards - INI PENTING!
-    # application.add_handler(CallbackQueryHandler(conversation_handler.button_callbacks))
-
-    # TEMP
+    # PENTING: Tambahkan callback handler untuk button interactions
+    # Handler ini akan menangani semua button presses
+    application.add_handler(CallbackQueryHandler(button_callback_handler, pattern='^(show_help|back_to_menu)$'))
+    
+    # Handler untuk conversation (start_input dan lainnya)
     application.add_handler(CallbackQueryHandler(conversation_handler.handle_interactions))
     
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
-    #application.add_handler(CommandHandler("status", conversation_handler.show_status))
-    #application.add_handler(CommandHandler("cancel", conversation_handler.cancel_conversation))
     application.add_handler(CommandHandler("help", help_command))
     
     # Image handler
-    #application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_image))
-
-    #TEMP
     application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_interactions))
 
     # Handle all text messages - welcome new users or continue conversation
-    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
-    
-    # TEMP
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, conversation_handler.handle_interactions))
 
     # Handle unknown commands
