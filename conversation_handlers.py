@@ -104,13 +104,13 @@ class ConversationHandler:
             previous_state == ConversationState.WAITING_TELEPON_PIC):
             
             if 'paket_deal' in session.data:
-                del session.data['paket_deal']
+                session.data['paket_deal'] = None
             if 'deal_bundling' in session.data:
-                del session.data['deal_bundling']
+                session.data['deal_bundling'] = None
 
         data_key_to_clear = self.STATE_TO_DATA_KEY.get(previous_state)
         if data_key_to_clear and data_key_to_clear in session.data:
-            del session.data[data_key_to_clear]
+            session.data[data_key_to_clear] = None
             logger.info(f"Cleared data for key: {data_key_to_clear}")
 
         session.set_state(previous_state)
@@ -810,12 +810,9 @@ class ConversationHandler:
 • **Tarif Layanan:** {data.get('tarif', '-')}
 • **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
 • **Jabatan PIC:** {data.get('jabatan_pic', '-')}
-• **Nomor HP PIC:** {data.get('telepon_pic', '-')}
-        """
+• **Nomor HP PIC:** {data.get('telepon_pic', '-')}\n"""
         if kegiatan == 'Dealing':
-            summary += f"""
-• **Deal Paket:** {data.get('paket_deal', '-')}
-• **Deal Bundling:** {data.get('deal_bundling', '-')}"""
+            summary += f"• **Deal Paket:** {data.get('paket_deal', '-')}\n• **Deal Bundling:** {data.get('deal_bundling', '-')}"
         
         image_bytes = base64.b64decode(data.get('foto_evidence'))
 
@@ -838,8 +835,9 @@ class ConversationHandler:
             return
 
         if query.data == 'batal_submit':
+            # TODO: Add a new canceled state and a new handler for it
             session.set_state(ConversationState.IDLE)
-            await query.message.reply_text("Input data dibatalkan. Kembali ke awal.")
+            await query.message.reply_text("*Input data dibatalkan.*\n\nKetik '/start' untuk memulai kembali.", parse_mode='Markdown')
             return
         
         user_id = query.from_user.id

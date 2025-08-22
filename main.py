@@ -26,10 +26,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 **Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
 
-📍 *Pendataan Visit:*
-• Kawasan Industri
-• Desa  
-• Puskesmas    
+📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*    
 """
     
     keyboard = [
