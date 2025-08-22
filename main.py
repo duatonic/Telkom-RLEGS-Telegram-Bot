@@ -22,12 +22,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     
     welcome_text = f"""
-**Halo {user_name}!** 👋
+**Halo *{user_name}*! ** 👋
 
-🤖**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
+**Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
 
-Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
-    """
+📍 *Pendataan Visit:*
+• Kawasan Industri
+• Desa  
+• Puskesmas    
+"""
     
     keyboard = [
         [InlineKeyboardButton("Start", callback_data='start_input')],
