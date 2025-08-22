@@ -83,7 +83,7 @@ class ConversationHandler:
     def _create_back_keyboard(self, custom_keyboard=None):
         keyboard = custom_keyboard if custom_keyboard else []
         
-        back_button = [InlineKeyboardButton("⬅️ Kembali", callback_data='go_back')]
+        back_button = [InlineKeyboardButton("⬅️ Kembali ke Pertanyaan Sebelumnya", callback_data='go_back')]
         keyboard.append(back_button)
             
         return InlineKeyboardMarkup(keyboard)
