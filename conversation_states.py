@@ -20,6 +20,7 @@ class ConversationState(Enum):
     WAITING_PAKET_DEAL = "waiting_paket_deal"
     WAITING_DEAL_BUNDLING = "waiting_deal_bundling"
     WAITING_FOTO_EVIDENCE = "waiting_foto_evidence"
+    CANCELED = "canceled"
     COMPLETED = "completed"
 
 class UserSession:

@@ -10,6 +10,8 @@ from googleservice import GoogleService
 
 logger = logging.getLogger(__name__)
 
+# TODO: command /cancel, cancel button actually restarting the convo, bugfix
+
 class ConversationHandler:
     def __init__(self):
         self.session_manager = SessionManager()
@@ -36,7 +38,8 @@ class ConversationHandler:
             ConversationState.WAITING_PAKET_DEAL: self.handle_paket_deal,
             ConversationState.WAITING_DEAL_BUNDLING: self.handle_deal_bundling,
             ConversationState.WAITING_FOTO_EVIDENCE: self.handle_foto_evidence,
-            ConversationState.COMPLETED: self.process_all_data
+            ConversationState.COMPLETED: self.process_all_data,
+            ConversationState.CANCELED: self.handle_canceled,
         }
 
         self.STATE_TO_DATA_KEY = {
@@ -146,6 +149,10 @@ class ConversationHandler:
         else:
             if update.message:
                 await update.message.reply_text('State undefined or incorrect input type.')
+
+    async def handle_canceled(self, query, session, is_going_back=False):
+        # TODO: HANDLE CANCELED HERE
+        
 
     async def start_conversation(self, query, session):
         if not isinstance(query, CallbackQuery):
