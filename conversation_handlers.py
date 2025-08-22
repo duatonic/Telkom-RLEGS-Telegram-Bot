@@ -83,7 +83,7 @@ class ConversationHandler:
     def _create_back_keyboard(self, custom_keyboard=None):
         keyboard = custom_keyboard if custom_keyboard else []
         
-        back_button = [InlineKeyboardButton("⬅️ Kembali", callback_data='go_back')]
+        back_button = [InlineKeyboardButton("⬅️ Pertanyaan Sebelumnya", callback_data='go_back')]
         keyboard.append(back_button)
             
         return InlineKeyboardMarkup(keyboard)
@@ -96,6 +96,17 @@ class ConversationHandler:
         await query.message.delete()
 
         previous_state = session.history.pop()
+
+        # Special handling when going back from foto_evidence for Visit users
+        current_kegiatan = session.data.get('kegiatan')
+        if (session.state == ConversationState.WAITING_FOTO_EVIDENCE and 
+            current_kegiatan == 'Visit' and 
+            previous_state == ConversationState.WAITING_TELEPON_PIC):
+            
+            if 'paket_deal' in session.data:
+                del session.data['paket_deal']
+            if 'deal_bundling' in session.data:
+                del session.data['deal_bundling']
 
         data_key_to_clear = self.STATE_TO_DATA_KEY.get(previous_state)
         if data_key_to_clear and data_key_to_clear in session.data:
@@ -356,9 +367,9 @@ class ConversationHandler:
             )
             return
         
-        session.add_data('tanggal', tanggal)
+        session.add_data('tanggal', result)
         
-        confirmation = f"✅ **Tanggal:** {tanggal}"
+        confirmation = f"✅ **Tanggal:** {result}"
         await query.message.reply_text(confirmation, parse_mode='Markdown')
 
         session.history.append(session.state)
@@ -646,7 +657,14 @@ class ConversationHandler:
         await query.message.reply_text(confirmation, parse_mode='Markdown')
 
         session.history.append(session.state)
-        await self._ask_paket_deal(query, session)
+        
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            session.add_data('paket_deal', '-')
+            session.add_data('deal_bundling', '-')
+            await self._ask_foto_evidence(query, session)
+        else:
+            await self._ask_paket_deal(query, session)
 
     async def _ask_paket_deal(self, query, session, is_going_back=False):
         session.set_state(ConversationState.WAITING_PAKET_DEAL)
@@ -733,7 +751,13 @@ class ConversationHandler:
     async def _ask_foto_evidence(self, query, session, is_going_back=False):
         session.set_state(ConversationState.WAITING_FOTO_EVIDENCE)
 
-        next_step = "**17. Upload Foto Evidence Visit**:"
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            step_number = "**15.**"  
+        else:
+            step_number = "**17.**"  
+
+        next_step = "**Upload Foto Evidence Visit**:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
         await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
@@ -766,6 +790,7 @@ class ConversationHandler:
         await query.message.reply_text(completion_msg, parse_mode='Markdown')
 
         data = session.data
+        kegiatan = data.get('kegiatan', '-')
 
         summary = f"""
 📋 **Ringkasan Data Lengkap:**
@@ -783,9 +808,11 @@ class ConversationHandler:
 • **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
 • **Jabatan PIC:** {data.get('jabatan_pic', '-')}
 • **Nomor HP PIC:** {data.get('telepon_pic', '-')}
-• **Deal Paket:** {data.get('paket_deal', '-')}
-• **Deal Bundling:** {data.get('deal_bundling', '-')}
         """
+        if kegiatan == 'Dealing':
+            summary += f"""
+• **Deal Paket:** {data.get('paket_deal', '-')}
+• **Deal Bundling:** {data.get('deal_bundling', '-')}"""
         
         image_bytes = base64.b64decode(data.get('foto_evidence'))
 
