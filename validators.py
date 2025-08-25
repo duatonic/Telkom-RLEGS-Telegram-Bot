@@ -162,7 +162,7 @@ class DataValidator:
             datetime(year, month, day)
             
             # Normalize to DD/MM/YYYY format untuk konsistensi output
-            normalized_date = f"{day:02d}/{month:02d}/{year}"
+            normalized_date = f"{day:02d}-{month:02d}-{year}"
             
             logger.info(f"Tanggal validated: {tanggal} -> normalized: {normalized_date}")
             return True, normalized_date
