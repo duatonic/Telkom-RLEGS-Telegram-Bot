@@ -942,7 +942,7 @@ class ConversationHandler:
             image_file = BytesIO(image_bytes)
             image_file.seek(0)
 
-            image_file_name = f'{data.get('kode_sa')}_{data.get('tanggal')}_{data.get('kegiatan')}.jpg'
+            image_file_name = f"{data.get('kode_sa')}_{data.get('tanggal')}_{data.get('kegiatan')}.jpg"
 
             image_link = self.google_service.upload_to_drive(image_file, image_file_name)
             data['foto_evidence'] = image_link
