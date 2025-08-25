@@ -65,6 +65,28 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancels the ongoing data entry conversation."""
+    user_id = update.effective_user.id
+    session = conversation_handler.session_manager.get_session(user_id)
+
+    # Check if the user is currently in the middle of a conversation
+    if session.state.value != "idle":
+        logger.info(f"User {user_id} has cancelled the conversation.")
+        
+        # Reset the session to clear all stored data and the current state
+        conversation_handler.session_manager.reset_session(user_id)
+        
+        await update.message.reply_text(
+            "Proses input data telah dibatalkan.\n\n"
+            "Ketik /start untuk memulai lagi dari awal."
+        )
+    else:
+        await update.message.reply_text(
+            "Tidak ada proses input yang sedang berjalan.\n\n"
+            "Ketik /start untuk menampilkan menu utama."
+        )
+
 async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle button callbacks"""
     query = update.callback_query
@@ -149,7 +171,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         await start_command(update, context)
     else:
         # User is in conversation, handle normally
-        await conversation_handler.handle_message(update, context)
+        await conversation_handler.handle_interactions(update, context)
 
 
 def main():
@@ -167,6 +189,7 @@ def main():
     # Add command handlers
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("cancel", cancel_command))
     
     # Image handler
     application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_interactions))

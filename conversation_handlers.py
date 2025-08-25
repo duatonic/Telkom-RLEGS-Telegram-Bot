@@ -18,7 +18,10 @@ class ConversationHandler:
         self.validator = DataValidator()
         self.google_service = GoogleService()
         #self.stack_history = []
-        
+
+        # This is a bad practice, TODO: Figure out a way to do this better
+        self.context = None
+
         self.handler_functions_map = {
             ConversationState.IDLE: self.start_conversation,
             ConversationState.WAITING_KODE_SA: self.handle_kode_sa,
@@ -39,7 +42,7 @@ class ConversationHandler:
             ConversationState.WAITING_DEAL_BUNDLING: self.handle_deal_bundling,
             ConversationState.WAITING_FOTO_EVIDENCE: self.handle_foto_evidence,
             ConversationState.COMPLETED: self.process_all_data,
-            ConversationState.CANCELED: self.handle_canceled,
+            #ConversationState.CANCELED: self.handle_canceled,
         }
 
         self.STATE_TO_DATA_KEY = {
@@ -125,6 +128,27 @@ class ConversationHandler:
             logger.error(f"No question asker found for state: {previous_state}")
             await query.message.reply_text("Terjadi kesalahan saat kembali.")
 
+    async def _expire_previous_buttons(self, query, context, session):
+        if isinstance(query, CallbackQuery):
+            try:
+                await query.message.edit_reply_markup(reply_markup=None)
+            except Exception as e:
+                logger.info(f"Could not edit message, it might have been deleted: {e}")
+            return
+
+        last_message_id = session.last_message_id
+        if last_message_id:
+            try:
+                await context.bot.edit_message_reply_markup(
+                    chat_id=query.effective_chat.id,
+                    message_id=last_message_id,
+                    reply_markup=None
+                )
+
+                session.last_message_id = None
+            except Exception as e:
+                logger.info(f"Could not edit message with ID {last_message_id}: {e}")
+
     async def handle_interactions(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Condition for button
         if update.callback_query:
@@ -140,6 +164,9 @@ class ConversationHandler:
         
         session = self.session_manager.get_session(user_id)
 
+        # This is bad practice TODO: Figure out how to do this more efficiently
+        self.context = context
+
         if isinstance(query, CallbackQuery) and query.data == 'go_back':
             await self._handle_go_back(query, session)
             return
@@ -152,6 +179,7 @@ class ConversationHandler:
 
     async def handle_canceled(self, query, session, is_going_back=False):
         # TODO: HANDLE CANCELED HERE
+        return
         
 
     async def start_conversation(self, query, session):
@@ -183,11 +211,15 @@ class ConversationHandler:
         await query.message.reply_text(welcome_message, parse_mode='Markdown')
 
         if is_going_back or isinstance(query, CallbackQuery):
-            await query.message.reply_text(start_message, parse_mode='Markdown')
+            question_message = await query.message.reply_text(start_message, parse_mode='Markdown')
         else:
-            await query.message.reply_text(start_message, parse_mode='Markdown')
+            question_message = await query.message.reply_text(start_message, parse_mode='Markdown')
+
+        session.last_message_id = question_message.message_id
 
     async def handle_kode_sa(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if query.message.photo or query.message.sticker or query.message.document:
             logger.info('Input is not a text.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format")
@@ -215,9 +247,12 @@ class ConversationHandler:
         next_step = "**2.** Masukkan *Nama Lengkap* Anda:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_nama(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if query.message.photo or query.message.sticker or query.message.document:
             logger.info('Input is not a text.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -247,9 +282,12 @@ class ConversationHandler:
         next_step = "**3.** Masukkan *No. HP* Anda:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_telepon(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -288,9 +326,12 @@ class ConversationHandler:
             [InlineKeyboardButton("Yogya Jateng Selatan", callback_data='witel_yogya_jateng_selatan')]
         ]
         reply_markup = self._create_back_keyboard(keyboard)
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_witel(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu witel.")
@@ -327,9 +368,12 @@ class ConversationHandler:
         next_step = "**5.** Masukkan *Telkom Daerah* Anda:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_telda(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -359,9 +403,12 @@ class ConversationHandler:
         next_step = f"**6.** Masukkan *Tanggal Visit*:\n(format: DD/MM/YYYY, DD-MM-YYYY, atau DD MM YYYY)"
         reply_markup = self._create_back_keyboard() if session.history else None
 
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_tanggal(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -397,9 +444,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
 
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_kategori(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu kategori.")
@@ -432,9 +482,12 @@ class ConversationHandler:
         next_step = "**8.** Masukkan *Nama Tenant / Desa / Puskesmas / Kecamatan* yang divisit:"
         reply_markup = self._create_back_keyboard() if session.history else None
 
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_tenant(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -468,9 +521,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
 
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_kegiatan(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu kegiatan.")
@@ -506,9 +562,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_layanan(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu layanan.")
@@ -545,9 +604,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_tarif(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu tarif.")
@@ -579,9 +641,12 @@ class ConversationHandler:
         next_step = "**12.** Masukkan *Nama PIC Pelanggan*:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_nama_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -611,9 +676,12 @@ class ConversationHandler:
         next_step = "**13.** Masukkan *Jabatan PIC*:"
         reply_markup = self._create_back_keyboard() if session.history else None
             
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_jabatan_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -643,9 +711,12 @@ class ConversationHandler:
         next_step = "**14.** Masukkan *Nomor HP PIC*:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_telepon_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update):
             logger.info('Input is not a text. Expecting text input.')
             await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
@@ -688,9 +759,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_paket_deal(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu paket.")
@@ -729,9 +803,12 @@ class ConversationHandler:
         ]
         reply_markup = self._create_back_keyboard(keyboard)
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_deal_bundling(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu paket.")
@@ -770,9 +847,12 @@ class ConversationHandler:
         next_step = "*Upload Foto Evidence Visit*:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
-        await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
 
     async def handle_foto_evidence(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, Update) or not query.message.photo:
             logger.info('Input is not an image. Expecting an image.')
             await query.message.reply_text("Mohon untuk mengunggah foto evidence visit.")
@@ -794,6 +874,8 @@ class ConversationHandler:
         await self.handle_summary(query, session)
 
     async def handle_summary(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         session.set_state(ConversationState.COMPLETED)
         
         completion_msg = "✅ **Data Lengkap Berhasil Dikumpulkan!**"
@@ -836,6 +918,8 @@ class ConversationHandler:
         await query.message.reply_photo(photo=image_file, caption=summary, parse_mode='Markdown', reply_markup=reply_markup)
 
     async def process_all_data(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
         if not isinstance(query, CallbackQuery):
             logger.info('Input is a text. Expecting button callback.')
             await query.message.reply_text("Mohon untuk memilih salah satu tombol.")

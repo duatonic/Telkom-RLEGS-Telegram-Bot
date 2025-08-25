@@ -21,6 +21,7 @@ Thumbs.db
 /credentials.json
 /.telebot-venv
 /.testgdocs-venv
+/.win-telebot-venv
 /__pycache__
 
 /token.pickle
