@@ -29,4 +29,7 @@ Thumbs.db
 /credentials-test.json
 
 test.py
-test_image.png
+test_image.png/
+
+
+/MiniApp/
