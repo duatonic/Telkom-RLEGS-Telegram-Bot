@@ -9,3 +9,4 @@ CREDENTIALS_FILE = 'credentials.json'
 SHEET_ID = os.getenv('SHEET_ID')
 DRIVE_FOLDER_ID = os.getenv('DRIVE_FOLDER_ID')
 CREDENTIALSJSON = os.getenv('CREDENTIALSJSON')
+WEBAPP_URL = "https://miniapp-rlegs.netlify.app/"

@@ -1,7 +1,8 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from conversation_handlers import ConversationHandler
+from miniapp_handler import MiniAppHandler
 import config
 from io import BytesIO
 
@@ -14,24 +15,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize conversation handler
+# Initialize handlers
 conversation_handler = ConversationHandler()
+miniapp_handler = MiniAppHandler()
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command with inline keyboard"""
+    """Start command with Mini App and traditional options"""
     user_name = update.effective_user.first_name
     
     welcome_text = f"""
-**Halo *{user_name}*! ** 👋
+**Halo *{user_name}*!** 👋
 
 **Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
 
-📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*    
+📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*
+
+Pilih metode input data:
 """
     
+    # Mini App button with WebAppInfo
+    webapp = WebAppInfo(url=config.WEBAPP_URL)
+    
     keyboard = [
-        [InlineKeyboardButton("Start", callback_data='start_input')],
-        [InlineKeyboardButton("Help", callback_data='show_help')]
+        [InlineKeyboardButton("📱 Buka Form (Recommended)", web_app=webapp)],
+        [InlineKeyboardButton("💬 Input via Chat (Traditional)", callback_data='start_chat_input')],
+        [InlineKeyboardButton("❓ Help", callback_data='show_help')]
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -47,10 +55,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """
 🤖 *Panduan Bot Rekapitulasi*
 
-📝 *Perintah:*
+📝 *Metode Input Data:*
+• **Form (Recommended)** - Interface modern dengan form
+• **Chat** - Input step-by-step via chat tradisional
+
+📋 *Perintah:*
 /start - Menu utama bot
 /cancel - Batalkan input yang sedang berjalan
 /help - Tampilkan panduan ini
+
+🔄 *Data yang dikumpulkan:*
+• Visit: 15 field data + foto evidence
+• Dealing: 15 field data + foto evidence
+
+📊 *Output:*
+Otomatis tersimpan ke Google Sheets dengan foto di Google Drive
     """
     
     # Create back button
@@ -77,15 +96,19 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Reset the session to clear all stored data and the current state
         conversation_handler.session_manager.reset_session(user_id)
         
+        keyboard = [
+            [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
-            "Proses input data telah dibatalkan.\n\n"
-            "Ketik /start untuk memulai lagi dari awal."
+            "✅ *Proses input data telah dibatalkan.*\n\n"
+            "Pilih opsi di bawah untuk melanjutkan:",
+            parse_mode='Markdown',
+            reply_markup=reply_markup
         )
     else:
-        await update.message.reply_text(
-            "Tidak ada proses input yang sedang berjalan.\n\n"
-            "Ketik /start untuk menampilkan menu utama."
-        )
+        await start_command(update, context)
 
 async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle button callbacks"""
@@ -98,10 +121,21 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         help_text = """
 🤖 *Panduan Bot Rekapitulasi*
 
-📝 *Perintah:*
+📝 *Metode Input Data:*
+• **Form (Recommended)** - Interface modern dengan form
+• **Chat** - Input step-by-step via chat tradisional
+
+📋 *Perintah:*
 /start - Menu utama bot
 /cancel - Batalkan input yang sedang berjalan
 /help - Tampilkan panduan ini
+
+🔄 *Data yang dikumpulkan:*
+• Visit: 15 field data + foto evidence
+• Dealing: 15 field data + foto evidence
+
+📊 *Output:*
+Otomatis tersimpan ke Google Sheets dengan foto di Google Drive
     """
         
         keyboard = [
@@ -117,36 +151,52 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         
     elif query.data == 'back_to_menu':
         # Go back to main menu
-        user_name = update.effective_user.first_name
-        welcome_text = f"""
-**Halo *{user_name}*! ** 👋
+        await start_command_callback(query, context)
+        
+    elif query.data == 'start_chat_input':
+        # Forward to traditional conversation handler
+        await conversation_handler.handle_interactions(update, context)
+
+async def start_command_callback(query, context):
+    """Start command for callback queries"""
+    user_name = query.from_user.first_name
+    
+    welcome_text = f"""
+**Halo *{user_name}*!** 👋
 
 **Selamat Datang di Rekapitulasi Data 8 Fishong Spot RLEGS III** 
 
-📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*    
+📍 *Pendataan Visit Kawasan Industri, Desa, dan Puskesmas*
+
+Pilih metode input data:
 """
-        
-        keyboard = [
-            [InlineKeyboardButton("Start", callback_data='start_input')],
-            [InlineKeyboardButton("Help", callback_data='show_help')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            text=welcome_text,
-            parse_mode='Markdown',
-            reply_markup=reply_markup
-        )
-        
-    elif query.data == 'start_input':
-        # Forward to conversation handler untuk memulai input data
-        await conversation_handler.handle_interactions(update, context)
+    
+    # Mini App button with WebAppInfo
+    webapp = WebAppInfo(url=config.WEBAPP_URL)
+    
+    keyboard = [
+        [InlineKeyboardButton("📱 Buka Form (Recommended)", web_app=webapp)],
+        [InlineKeyboardButton("💬 Input via Chat (Traditional)", callback_data='start_chat_input')],
+        [InlineKeyboardButton("❓ Help", callback_data='show_help')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        text=welcome_text,
+        parse_mode='Markdown',
+        reply_markup=reply_markup
+    )
+
+async def handle_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle data from Web App"""
+    if update.message and update.message.web_app_data:
+        await miniapp_handler.process_webapp_data(update, context)
 
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle unknown commands with helpful response"""
     keyboard = [
         [InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')],
-        [InlineKeyboardButton("Help", callback_data='show_help')]
+        [InlineKeyboardButton("❓ Help", callback_data='show_help')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -179,11 +229,13 @@ def main():
     # Create application
     application = Application.builder().token(config.TELEGRAM_TOKEN).build()
     
-    # PENTING: Tambahkan callback handler untuk button interactions
-    # Handler ini akan menangani semua button presses
-    application.add_handler(CallbackQueryHandler(button_callback_handler, pattern='^(show_help|back_to_menu)$'))
+    # PENTING: Handler untuk Web App data
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_data))
     
-    # Handler untuk conversation (start_input dan lainnya)
+    # Handler untuk callback buttons
+    application.add_handler(CallbackQueryHandler(button_callback_handler, pattern='^(show_help|back_to_menu|start_chat_input)$'))
+    
+    # Handler untuk conversation (traditional chat input)
     application.add_handler(CallbackQueryHandler(conversation_handler.handle_interactions))
     
     # Add command handlers
@@ -191,7 +243,7 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel_command))
     
-    # Image handler
+    # Image handler for traditional chat
     application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_interactions))
 
     # Handle all text messages - welcome new users or continue conversation
@@ -201,10 +253,11 @@ def main():
     application.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
     
     # Start bot
-    print("🤖 Bot Step-by-Step RLEGS dengan Inline Buttons berjalan...")
-    print("📝 User flow: Menu Buttons → Input Data (15 steps) → Save")
-    print("🔘 Features: Inline Keyboards, Auto Welcome, Status Tracking")
-    print("📊 Commands: /start, /status, /cancel, /help")
+    print("🤖 Bot RLEGS dengan Mini App Integration berjalan...")
+    print("📱 Mini App URL:", config.WEBAPP_URL)
+    print("📝 User flow: Menu → Mini App Form / Chat Input → Save")
+    print("🔘 Features: Web App Integration, Inline Keyboards, Status Tracking")
+    print("📊 Commands: /start, /cancel, /help")
     
     application.run_polling()
 
