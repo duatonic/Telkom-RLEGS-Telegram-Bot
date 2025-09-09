@@ -17,7 +17,6 @@ class ConversationHandler:
         self.session_manager = SessionManager()
         self.validator = DataValidator()
         self.google_service = GoogleService()
-        #self.stack_history = []
 
         # This is a bad practice, TODO: Figure out a way to do this better
         self.context = None
@@ -42,7 +41,6 @@ class ConversationHandler:
             ConversationState.WAITING_DEAL_BUNDLING: self.handle_deal_bundling,
             ConversationState.WAITING_FOTO_EVIDENCE: self.handle_foto_evidence,
             ConversationState.COMPLETED: self.process_all_data,
-            #ConversationState.CANCELED: self.handle_canceled,
         }
 
         self.STATE_TO_DATA_KEY = {
@@ -180,7 +178,6 @@ class ConversationHandler:
     async def handle_canceled(self, query, session, is_going_back=False):
         # TODO: HANDLE CANCELED HERE
         return
-        
 
     async def start_conversation(self, query, session):
         if not isinstance(query, CallbackQuery):
@@ -549,7 +546,12 @@ class ConversationHandler:
         await query.message.reply_text(confirmation, parse_mode='Markdown')
 
         session.history.append(session.state)
-        await self._ask_layanan(query, session)
+        
+        # Branch logic based on kegiatan
+        if selected_kegiatan == 'Visit':
+            await self._ask_layanan(query, session)
+        else:  # Dealing
+            await self._ask_paket_deal(query, session)
 
     async def _ask_layanan(self, query, session, is_going_back=False):
         session.set_state(ConversationState.WAITING_LAYANAN)
@@ -635,122 +637,10 @@ class ConversationHandler:
         session.history.append(session.state)
         await self._ask_nama_pic(query, session)
 
-    async def _ask_nama_pic(self, query, session, is_going_back=False):
-        session.set_state(ConversationState.WAITING_NAMA_PIC)
-
-        next_step = "**12.** Masukkan *Nama PIC Pelanggan*:"
-        reply_markup = self._create_back_keyboard() if session.history else None
-        
-        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
-        session.last_message_id = question_message.message_id
-
-    async def handle_nama_pic(self, query, session):
-        await self._expire_previous_buttons(query, self.context, session)
-
-        if not isinstance(query, Update):
-            logger.info('Input is not a text. Expecting text input.')
-            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
-            return
-
-        nama_pic = query.message.text.strip()
-
-        is_valid, result = self.validator.validate_nama_pic(nama_pic)
-
-        if not is_valid:
-            await query.message.reply_text(
-                f"❌ {result}\n\nSilakan masukkan Nama PIC Pelanggan yang benar:"
-            )
-            return
-        
-        session.add_data('nama_pic', result)
-        
-        confirmation = f"✅ **Nama PIC Pelanggan:** *{result}*"
-        await query.message.reply_text(confirmation, parse_mode='Markdown')
-
-        session.history.append(session.state)
-        await self._ask_jabatan_pic(query, session)
-
-    async def _ask_jabatan_pic(self, query, session, is_going_back=False):
-        session.set_state(ConversationState.WAITING_JABATAN_PIC)
-
-        next_step = "**13.** Masukkan *Jabatan PIC*:"
-        reply_markup = self._create_back_keyboard() if session.history else None
-            
-        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
-        session.last_message_id = question_message.message_id
-
-    async def handle_jabatan_pic(self, query, session):
-        await self._expire_previous_buttons(query, self.context, session)
-
-        if not isinstance(query, Update):
-            logger.info('Input is not a text. Expecting text input.')
-            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
-            return
-
-        jabatan_pic = query.message.text.strip()
-
-        is_valid, result = self.validator.validate_nama_pic(jabatan_pic)
-
-        if not is_valid:
-            await query.message.reply_text(
-                f"❌ {result}\n\nSilakan masukkan Jabatan PIC yang benar:"
-            )
-            return
-        
-        session.add_data('jabatan_pic', result)
-        
-        confirmation = f"✅ **Jabatan PIC:** *{result}*"
-        await query.message.reply_text(confirmation, parse_mode='Markdown')
-        
-        session.history.append(session.state)
-        await self._ask_telepon_pic(query, session)
-
-    async def _ask_telepon_pic(self, query, session, is_going_back=False):
-        session.set_state(ConversationState.WAITING_TELEPON_PIC)
-
-        next_step = "**14.** Masukkan *Nomor HP PIC*:"
-        reply_markup = self._create_back_keyboard() if session.history else None
-        
-        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
-        session.last_message_id = question_message.message_id
-
-    async def handle_telepon_pic(self, query, session):
-        await self._expire_previous_buttons(query, self.context, session)
-
-        if not isinstance(query, Update):
-            logger.info('Input is not a text. Expecting text input.')
-            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
-            return
-
-        telepon_pic = query.message.text.strip()
-
-        is_valid, result = self.validator.validate_telepon_pic(telepon_pic)
-
-        if not is_valid:
-            await query.message.reply_text(
-                f"❌ {result}\n\nSilakan masukkan Nomor HP PIC yang benar:"
-            )
-            return
-        
-        session.add_data('telepon_pic', result)
-        
-        confirmation = f"✅ **Nomor HP PIC:** *{result}*"
-        await query.message.reply_text(confirmation, parse_mode='Markdown')
-
-        session.history.append(session.state)
-        
-        kegiatan = session.data.get('kegiatan')
-        if kegiatan == 'Visit':
-            session.add_data('paket_deal', '-')
-            session.add_data('deal_bundling', '-')
-            await self._ask_foto_evidence(query, session)
-        else:
-            await self._ask_paket_deal(query, session)
-
     async def _ask_paket_deal(self, query, session, is_going_back=False):
         session.set_state(ConversationState.WAITING_PAKET_DEAL)
 
-        next_step = "**15.** Jika Anda melakukan *Dealing, pilih salah satu deal paket Mbps*:"
+        next_step = "**10.** Jika Anda melakukan *Dealing, pilih salah satu deal paket Mbps*:"
         keyboard = [
             [InlineKeyboardButton("50 Mbps", callback_data='paket_50')],
             [InlineKeyboardButton("75 Mbps", callback_data='paket_75')],
@@ -794,7 +684,7 @@ class ConversationHandler:
     async def _ask_deal_bundling(self, query, session, is_going_back=False):
         session.set_state(ConversationState.WAITING_DEAL_BUNDLING)
 
-        next_step = "**16.** Pilih salah satu dealing *layanan bundling*:"
+        next_step = "**11.** Pilih salah satu dealing *layanan bundling*:"
         keyboard = [
             [InlineKeyboardButton("1P Internet Only", callback_data='deal_IO')],
             [InlineKeyboardButton("2P Internet + TV", callback_data='deal_IT')],
@@ -833,6 +723,133 @@ class ConversationHandler:
         await query.message.reply_text(confirmation, parse_mode='Markdown')
         
         session.history.append(session.state)
+        await self._ask_nama_pic(query, session)
+
+    async def _ask_nama_pic(self, query, session, is_going_back=False):
+        session.set_state(ConversationState.WAITING_NAMA_PIC)
+
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            next_step = "**12.** Masukkan *Nama PIC Pelanggan*:"
+        else:  # Dealing
+            next_step = "**12.** Masukkan *Nama PIC Pelanggan*:"
+        
+        reply_markup = self._create_back_keyboard() if session.history else None
+        
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
+
+    async def handle_nama_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
+        if not isinstance(query, Update):
+            logger.info('Input is not a text. Expecting text input.')
+            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
+            return
+
+        nama_pic = query.message.text.strip()
+
+        is_valid, result = self.validator.validate_nama_pic(nama_pic)
+
+        if not is_valid:
+            await query.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Nama PIC Pelanggan yang benar:"
+            )
+            return
+        
+        session.add_data('nama_pic', result)
+        
+        confirmation = f"✅ **Nama PIC Pelanggan:** *{result}*"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+
+        session.history.append(session.state)
+        await self._ask_jabatan_pic(query, session)
+
+    async def _ask_jabatan_pic(self, query, session, is_going_back=False):
+        session.set_state(ConversationState.WAITING_JABATAN_PIC)
+
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            next_step = "**13.** Masukkan *Jabatan PIC*:"
+        else:  # Dealing
+            next_step = "**13.** Masukkan *Jabatan PIC*:"
+        
+        reply_markup = self._create_back_keyboard() if session.history else None
+            
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
+
+    async def handle_jabatan_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
+        if not isinstance(query, Update):
+            logger.info('Input is not a text. Expecting text input.')
+            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
+            return
+
+        jabatan_pic = query.message.text.strip()
+
+        is_valid, result = self.validator.validate_nama_pic(jabatan_pic)
+
+        if not is_valid:
+            await query.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Jabatan PIC yang benar:"
+            )
+            return
+        
+        session.add_data('jabatan_pic', result)
+        
+        confirmation = f"✅ **Jabatan PIC:** *{result}*"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+        
+        session.history.append(session.state)
+        await self._ask_telepon_pic(query, session)
+
+    async def _ask_telepon_pic(self, query, session, is_going_back=False):
+        session.set_state(ConversationState.WAITING_TELEPON_PIC)
+
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            next_step = "**14.** Masukkan *Nomor HP PIC*:"
+        else:  # Dealing
+            next_step = "**14.** Masukkan *Nomor HP PIC*:"
+        
+        reply_markup = self._create_back_keyboard() if session.history else None
+        
+        question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
+        session.last_message_id = question_message.message_id
+
+    async def handle_telepon_pic(self, query, session):
+        await self._expire_previous_buttons(query, self.context, session)
+
+        if not isinstance(query, Update):
+            logger.info('Input is not a text. Expecting text input.')
+            await query.message.reply_text("Mohon untuk memasukkan data sesuai format.")
+            return
+
+        telepon_pic = query.message.text.strip()
+
+        is_valid, result = self.validator.validate_telepon_pic(telepon_pic)
+
+        if not is_valid:
+            await query.message.reply_text(
+                f"❌ {result}\n\nSilakan masukkan Nomor HP PIC yang benar:"
+            )
+            return
+        
+        session.add_data('telepon_pic', result)
+        
+        confirmation = f"✅ **Nomor HP PIC:** *{result}*"
+        await query.message.reply_text(confirmation, parse_mode='Markdown')
+
+        session.history.append(session.state)
+        
+        kegiatan = session.data.get('kegiatan')
+        if kegiatan == 'Visit':
+            # For Visit: Set default values for deal fields
+            session.add_data('paket_deal', '-')
+            session.add_data('deal_bundling', '-')
+        
         await self._ask_foto_evidence(query, session)
 
     async def _ask_foto_evidence(self, query, session, is_going_back=False):
@@ -840,11 +857,13 @@ class ConversationHandler:
 
         kegiatan = session.data.get('kegiatan')
         if kegiatan == 'Visit':
-            step_number = "**15.**"  
-        else:
-            step_number = "**17.**"  
+            step_number = "**15.**"
+            activity_text = "Visit"
+        else:  # Dealing
+            step_number = "**15.**"
+            activity_text = "Dealing"
 
-        next_step = "*Upload Foto Evidence Visit*:"
+        next_step = f"{step_number} *Upload Foto Evidence {activity_text}*:"
         reply_markup = self._create_back_keyboard() if session.history else None
         
         question_message = await query.message.reply_text(next_step, parse_mode='Markdown', reply_markup=reply_markup)
@@ -854,8 +873,10 @@ class ConversationHandler:
         await self._expire_previous_buttons(query, self.context, session)
 
         if not isinstance(query, Update) or not query.message.photo:
+            kegiatan = session.data.get('kegiatan')
+            activity_text = "visit" if kegiatan == 'Visit' else "dealing"
             logger.info('Input is not an image. Expecting an image.')
-            await query.message.reply_text("Mohon untuk mengunggah foto evidence visit.")
+            await query.message.reply_text(f"Mohon untuk mengunggah foto evidence {activity_text}.")
             return
     
         photo = query.message.photo[-1]
@@ -878,14 +899,16 @@ class ConversationHandler:
 
         session.set_state(ConversationState.COMPLETED)
         
-        completion_msg = "✅ **Data Lengkap Berhasil Dikumpulkan!**"
+        kegiatan = session.data.get('kegiatan')
+        activity_text = "Visit" if kegiatan == 'Visit' else "Dealing"
+        
+        completion_msg = f"✅ **Data {activity_text} Lengkap Berhasil Dikumpulkan!**"
         await query.message.reply_text(completion_msg, parse_mode='Markdown')
 
         data = session.data
-        kegiatan = data.get('kegiatan', '-')
 
         summary = f"""
-📋 **Ringkasan Data Lengkap:**
+📋 **Ringkasan Data {activity_text} Lengkap:**
 • **Kode SA:** {data.get('kode_sa', '-')}
 • **Nama:** {data.get('nama', '-')}
 • **No. Telepon:** {data.get('no_telp', '-')}
@@ -893,15 +916,23 @@ class ConversationHandler:
 • **Telkom Daerah:** {data.get('telda', '-')}
 • **Tanggal:** {data.get('tanggal', '-')}
 • **Kategori Pelanggan:** {data.get('kategori', '-')}
-• **Kegiatan:** {data.get('kegiatan', '-')}
 • **Nama Tenant:** {data.get('tenant', '-')}
+• **Kegiatan:** {data.get('kegiatan', '-')}"""
+
+        if kegiatan == 'Visit':
+            summary += f"""
 • **Tipe Layanan:** {data.get('layanan', '-')}
-• **Tarif Layanan:** {data.get('tarif', '-')}
+• **Tarif Layanan:** {data.get('tarif', '-')}"""
+        else:  # Dealing
+            summary += f"""
+• **Deal Paket:** {data.get('paket_deal', '-')}
+• **Deal Bundling:** {data.get('deal_bundling', '-')}"""
+
+        summary += f"""
 • **Nama PIC Pelanggan:** {data.get('nama_pic', '-')}
 • **Jabatan PIC:** {data.get('jabatan_pic', '-')}
-• **Nomor HP PIC:** {data.get('telepon_pic', '-')}\n"""
-        if kegiatan == 'Dealing':
-            summary += f"• **Deal Paket:** {data.get('paket_deal', '-')}\n• **Deal Bundling:** {data.get('deal_bundling', '-')}"
+• **Nomor HP PIC:** {data.get('telepon_pic', '-')}
+"""
         
         image_bytes = base64.b64decode(data.get('foto_evidence'))
 
@@ -946,30 +977,63 @@ class ConversationHandler:
             image_file = BytesIO(image_bytes)
             image_file.seek(0)
 
-            kode_sa_string = data.get('kode_sa')
-            tanggal_string = data.get('tanggal')
-            kegiatan_string = data.get('kegiatan')
-
-            image_file_name = f"{kode_sa_string}_{tanggal_string}_{kegiatan_string}.jpg"
+            image_file_name = f"{data.get('kode_sa')}_{data.get('tanggal')}_{data.get('kegiatan')}.jpg"
 
             image_link = self.google_service.upload_to_drive(image_file, image_file_name)
             data['foto_evidence'] = image_link
 
-            # Append link to submission data
-            data_to_submit = list(data.values())
-            logger.info(f"Data to submit: {data_to_submit}")
+            kegiatan = data.get('kegiatan')
+            
+            # Prepare ordered data based on activity type
+            if kegiatan == 'Visit':
+                # For Visit: Set default values for dealing fields
+                if 'paket_deal' not in data:
+                    data['paket_deal'] = '-'
+                if 'deal_bundling' not in data:
+                    data['deal_bundling'] = '-'
+            else:  # Dealing
+                # For Dealing: Set default values for visit fields
+                if 'layanan' not in data:
+                    data['layanan'] = '-'
+                if 'tarif' not in data:
+                    data['tarif'] = '-'
 
-            success, message = self.google_service.append_to_sheet([data_to_submit])
+            # Standard order for all data: 17 fields total
+            ordered_data = [
+                data.get('kode_sa', '-'),      # 1
+                data.get('nama', '-'),         # 2
+                data.get('no_telp', '-'),      # 3
+                data.get('witel', '-'),        # 4
+                data.get('telda', '-'),        # 5
+                data.get('tanggal', '-'),      # 6
+                data.get('kategori', '-'),     # 7
+                data.get('tenant', '-'),       # 8
+                data.get('kegiatan', '-'),     # 9
+                data.get('layanan', '-'),      # 10 (Visit only, '-' for Dealing)
+                data.get('tarif', '-'),        # 11 (Visit only, '-' for Dealing)
+                data.get('nama_pic', '-'),     # 12
+                data.get('jabatan_pic', '-'),  # 13
+                data.get('telepon_pic', '-'),  # 14
+                data.get('paket_deal', '-'),   # 15 (Dealing only, '-' for Visit)
+                data.get('deal_bundling', '-'), # 16 (Dealing only, '-' for Visit)
+                data.get('foto_evidence', '-'), # 17
+            ]
+
+            logger.info(f"Data to submit: {ordered_data}")
+
+            success, message = self.google_service.append_to_sheet([ordered_data])
                         
             if success:
                 # Success with menu buttons
                 keyboard = [
                     [InlineKeyboardButton("🚀 Input Data Baru", callback_data='start_input')],
-                    #[InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                final_msg = f"🎉 **Data Berhasil Disimpan!**\n\n🆔 Kode SA: {data.get('kode_sa', '-')}\n✅ Data lengkap (17 field) telah tersimpan ke Google Docs\n🕐 Waktu: Otomatis tercatat\n---\n💡 **Pilih aksi selanjutnya:**"
+                activity_text = "Visit" if kegiatan == 'Visit' else "Dealing"
+                field_count = "15" if kegiatan == 'Visit' else "15"  # Both are 15 steps now
+                
+                final_msg = f"🎉 **Data {activity_text} Berhasil Disimpan!**\n\n🆔 Kode SA: {data.get('kode_sa', '-')}\n✅ Data lengkap ({field_count} field) telah tersimpan ke Google Docs\n🕐 Waktu: Otomatis tercatat\n---\n💡 **Pilih aksi selanjutnya:**"
                 
                 await status_msg.edit_text(final_msg, parse_mode='Markdown', reply_markup=reply_markup)
                 
@@ -982,7 +1046,6 @@ class ConversationHandler:
                 # Error with retry button
                 keyboard = [
                     [InlineKeyboardButton("🔄 Coba Lagi", callback_data='start_input')],
-                    #[InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
@@ -995,7 +1058,6 @@ class ConversationHandler:
             
             keyboard = [
                 [InlineKeyboardButton("🔄 Coba Lagi", callback_data='start_input')],
-                #[InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
