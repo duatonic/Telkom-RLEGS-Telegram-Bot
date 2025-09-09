@@ -1,13 +1,14 @@
 import os.path
-import pickle
+import json
 import logging
 import config
+import time
 
 import drive
 import spreadsheet
 
 from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
@@ -21,21 +22,45 @@ class GoogleService:
 
     def authenticate(self):
         try:
-            if os.path.exists('token.pickle'):
-                with open('token.pickle', 'rb') as token:
-                    self.creds = pickle.load(token)
+            if not os.path.exists(config.OAUTH_FILE):
+                logger.error("Auth not initialized. Expected 'google_oauth.json' to exist with client_id, client_secret, refresh_token. Please run the 'auth_bootstrap_desktop.py' script to generate the auth credentials.")
 
-            if not self.creds or not self.creds.valid:
-                if self.creds and self.creds.expired and self.creds.refresh_token:
-                    self.creds.refresh(Request())
-                else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        config.CREDENTIALSJSON, self.scopes
-                    )
-                    self.creds = flow.run_local_server(port=0)
+                raise RuntimeError(
+                    "Auth not initialized. Expected 'google_oauth.json' to exist with client_id, client_secret, refresh_token."
+                )
 
-                with open('token.pickle', 'wb') as token:
-                    pickle.dump(self.creds, token)
+            with open(config.OAUTH_FILE, 'r') as token:
+                blob = json.load(token)
+
+            # get creds process
+            missing = [k for k in ("client_id", "client_secret", "refresh_token") if not blob.get(k)]
+            if missing:
+                logger.error(f"Missing fields in {config.OAUTH_FILE}: {missing}")
+                raise RuntimeError(f"Missing fields in {config.OAUTH_FILE}: {missing}")
+
+            creds = Credentials(
+                token=blob.get("access_token"),  # may be None
+                refresh_token=blob["refresh_token"],
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=blob["client_id"],
+                client_secret=blob["client_secret"],
+                scopes=self.scopes,
+            )
+
+            if not creds.valid:
+                req = Request()
+                creds.refresh(req)
+                blob["access_token"] = creds.token
+                blob["scopes"] = self.scopes
+                blob["saved_at"] = int(time.time())
+
+                os.makedirs(os.path.dirname(config.OAUTH_FILE), exist_ok=True)
+                with open(config.OAUTH_FILE, "w") as f:
+                    json.dump(blob, f, indent=2)
+                os.chmod(config.OAUTH_FILE, 0o600)
+
+            logger.info('Google Service authentication successful')
+            self.creds = creds
 
         except Exception as e:
             logger.error(f"An Error occurred: {e}")

@@ -925,15 +925,19 @@ class ConversationHandler:
             await query.message.reply_text("Mohon untuk memilih salah satu tombol.")
             return
 
+        user_id = query.from_user.id
+
         if query.data == 'batal_submit':
             # TODO: Add a new canceled state and a new handler for it
+            
             session.set_state(ConversationState.IDLE)
+            session.reset_session(user_id)
+
             await query.message.reply_text("*Input data dibatalkan.*\n\nKetik '/start' untuk memulai kembali.", parse_mode='Markdown')
             return
         
-        user_id = query.from_user.id
         status_msg = await query.message.reply_text("⏳ **Menyimpan ke Google Sheet...**", parse_mode='Markdown')
-        
+
         data = session.data
 
         try:

@@ -20,7 +20,16 @@ conversation_handler = ConversationHandler()
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start command with inline keyboard"""
     user_name = update.effective_user.first_name
+    user_id = update.effective_user.id
+    session = conversation_handler.session_manager.get_session(user_id)
     
+    if session.state.value != "idle":
+        logger.info(f"User {user_id} used /start during an active conversation. Resetting state.")
+        
+        conversation_handler.session_manager.reset_session(user_id)
+        
+        await update.message.reply_text("Sesi input sebelumnya telah dibatalkan.")
+
     welcome_text = f"""
 **Halo *{user_name}*! ** 👋
 
