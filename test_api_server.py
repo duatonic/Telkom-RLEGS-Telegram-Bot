@@ -106,8 +106,8 @@ def create_app():
 
             success, res = svc.append_to_sheet([row])
 
-            return jsonify({"drive": drive_link, "sheets": res, "row": row})
-
+            return jsonify({"row": row, "status": success})
+    
         except Exception as e:
             current_app.logger.info(f'Error ocurred on google service process: {e}')
 

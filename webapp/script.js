@@ -591,16 +591,20 @@ function handleFormSubmit(event) {
 //}
 
 async function submitData(form) {
-	// Simulate random success/failure for demo
-	const isSuccess = Math.random() > 0.1; // 90% success rate
-	// TODO: Submit logic here
+
 	payload = new FormData(form);
 	console.log("payload:", payload);
+	var isSuccess;
 
 	try {
 		const res = await fetch('/api/append-to-sheet', { method: 'POST', body: payload });
-		const text = await res.text();
-		if (!res.ok) throw new Error(text);
+		const text = await res.json();
+		if (!res.ok)
+			throw new Error(text);
+
+		console.log(text);
+
+		isSuccess = res.status;
 
 	} catch (err) {
 		console.log(String(err));
