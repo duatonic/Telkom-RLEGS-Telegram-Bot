@@ -1,382 +1,341 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-	<meta name="theme-color" content="#E85D04">
-	<title>8 Fishing Spot RLEGS III</title>
-	<!-- Telegram SDK -->
-	<script src="https://telegram.org/js/telegram-web-app.js"></script>
-	<!-- Font Awesome for better icons -->
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-	<!-- Custom styles -->
-	<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- Ganti warna header mini‑app ke merah agar konsisten -->
+    <meta name="theme-color" content="#dc2626">
+    <title>8 Fishing Spot RLEGS III</title>
+    <!-- Telegram SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-	<!-- Loading overlay -->
-	<div id="loading" class="loading-screen">
-		<div class="loading-container">
-			<div class="logo-animation">
-				<div class="logo-circle">
-					<img src="logo-telkom.png" alt="RLEGS Logo" class="logo-image"
-						onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'font-size:24px;font-weight:800;color:#dc2626;\'>RLEGS</span>'">
-				</div>
-				<div class="logo-dots">
-					<span></span>
-					<span></span>
-					<span></span>
-				</div>
-			</div>
-			<div class="loading-brand">RLEGS BOT</div>
-			<div class="loading-subtitle">8 Fishing Spot RLEGS III</div>
-			<div class="running-text-container">
-				<div class="running-text" id="runningText">
-					Launch App...
-				</div>
-			</div>
-		</div>
-	</div>
+    <!-- Loading overlay -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-container">
+            <div class="logo-animation">
+                <div class="logo-circle">
+                    <img src="logo-telkom.png" alt="RLEGS Logo" class="logo-image"
+                         onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'font-size:24px;font-weight:800;color:#dc2626;\'>RLEGS</span>'">
+                </div>
+                <div class="logo-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="loading-brand">RLEGS BOT</div>
+            <div class="loading-subtitle">8 Fishing Spot RLEGS III</div>
+            <div class="running-text-container">
+                <div class="running-text" id="runningText">
+                   Launch App...
+                </div>
+            </div>
+        </div>
+    </div>
 
-	<!-- Main App Container -->
-	<div id="app" class="app-container" style="display: none;">
-		<header class="app-header">
-			<div class="header-content">
-				<div class="brand-section">
-					<div class="brand-text">
-						<h1>8 Fishing Spot RLEGS III</h1>
-						<p>Pendataan Visit Kawasan Industri, Desa, dan Puskesmas</p>
-					</div>
-				</div>
-			</div>
-		</header>
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand-section">
+                    <div class="brand-text">
+                        <h1>8 Fishing Spot RLEGS III</h1>
+                        <p>Pendataan Visit Kawasan Industri, Desa, dan Puskesmas</p>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-		<div id="mainMenu" class="main-content">
-			<div class="welcome-section">
-				<h2>Pilih Jenis Kegiatan</h2>
-				<p>Silakan pilih kegiatan yang Anda lakukan</p>
-			</div>
+        <div id="mainMenu" class="main-content">
+            <div class="welcome-section">
+                <h2>Pilih Jenis Kegiatan</h2>
+                <p>Silakan pilih kegiatan yang Anda lakukan</p>
+            </div>
 
-			<div class="activity-menu">
-				<!-- Card for Visit -->
-				<div class="activity-item visit-item" onclick="selectActivity('Visit')">
-					<div class="activity-icon">
-						<div class="icon-wrapper visit-bg">
-							<!-- Use FontAwesome icon instead of emoji -->
-							<i class="fa-solid fa-city"></i>
-						</div>
-						<span class="activity-badge">14 Fields</span>
-					</div>
-					<div class="activity-info">
-						<h3>VISIT</h3>
-						<p>Kunjungan ke Kawasan Industri, Desa, dan Puskesmas untuk survey dan
-							pengumpulan data</p>
-						<div class="activity-features">
-							<span>Data Visit Pelanggan</span>
-							<span>Data PIC Pelanggan</span>
-							<span>Foto Evidence Visit</span>
-						</div>
-					</div>
-					<button class="activity-btn">
-						<span>MULAI</span>
-						<div class="btn-arrow">→</div>
-					</button>
-				</div>
+            <div class="activity-menu">
+                <!-- Kartu Visit -->
+                <div class="activity-item visit-item" onclick="selectActivity('Visit')">
+                    <div class="activity-icon">
+                        <div class="icon-wrapper visit-bg">
+                            <i class="fa-solid fa-city"></i>
+                        </div>
+                        <!-- Jumlah field disesuaikan dengan field wajib yang tersisa -->
+                        <span class="activity-badge">14 Fields</span>
+                    </div>
+                    <div class="activity-info">
+                        <h3>VISIT</h3>
+                        <p>Kunjungan ke Kawasan Industri, Desa, dan Puskesmas untuk survey dan pengumpulan data</p>
+                        <div class="activity-features">
+                            <span>Data Visit Pelanggan</span>
+                            <span>Data PIC Pelanggan</span>
+                            <span>Foto Evidence Visit</span>
+                        </div>
+                    </div>
+                    <button class="activity-btn">
+                        <span>MULAI</span>
+                        <div class="btn-arrow">→</div>
+                    </button>
+                </div>
 
-				<!-- Card for Dealing -->
-				<div class="activity-item dealing-item" onclick="selectActivity('Dealing')">
-					<div class="activity-icon">
-						<div class="icon-wrapper dealing-bg">
-							<!-- Use FontAwesome handshake icon -->
-							<i class="fa-solid fa-handshake"></i>
-						</div>
-						<span class="activity-badge">14 Fields</span>
-					</div>
-					<div class="activity-info">
-						<h3>DEALING</h3>
-						<p>Tahap dealing layanan kepada pelanggan</p>
-						<div class="activity-features">
-							<span>Dealing Pelanggan</span>
-							<span>Data PIC Pelanggan</span>
-							<span>Foto Evidence Visit</span>
-						</div>
-					</div>
-					<button class="activity-btn">
-						<span>MULAI</span>
-						<div class="btn-arrow">→</div>
-					</button>
-				</div>
-			</div>
-		</div>
+                <!-- Kartu Dealing -->
+                <div class="activity-item dealing-item" onclick="selectActivity('Dealing')">
+                    <div class="activity-icon">
+                        <div class="icon-wrapper dealing-bg">
+                            <i class="fa-solid fa-handshake"></i>
+                        </div>
+                        <span class="activity-badge">14 Fields</span>
+                    </div>
+                    <div class="activity-info">
+                        <h3>DEALING</h3>
+                        <p>Tahap dealing layanan kepada pelanggan</p>
+                        <div class="activity-features">
+                            <span>Dealing Pelanggan</span>
+                            <span>Data PIC Pelanggan</span>
+                            <span>Foto Evidence Visit</span>
+                        </div>
+                    </div>
+                    <button class="activity-btn">
+                        <span>MULAI</span>
+                        <div class="btn-arrow">→</div>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-		<!-- Form Container -->
-		<div id="formContainer" class="main-content" style="display: none;">
-			<div class="form-header">
-				<button class="back-btn" onclick="backToMenu()">
-					<span class="back-icon">←</span>
-					<span>Kembali</span>
-				</button>
-				<div class="form-title" id="formTitle">FORM VISIT</div>
-			</div>
+        <!-- Form Container -->
+        <div id="formContainer" class="main-content" style="display: none;">
+            <div class="form-header">
+                <button class="back-btn" onclick="backToMenu()">
+                    <span class="back-icon">←</span>
+                    <span>Kembali</span>
+                </button>
+                <div class="form-title" id="formTitle">FORM VISIT</div>
+            </div>
 
-			<div class="progress-container">
-				<div class="progress-info">
-					<span class="progress-text">Progress</span>
-					<span class="progress-count">
-						<span id="currentStep">0</span>/<span id="totalSteps">15</span>
-					</span>
-				</div>
-				<div class="progress-bar">
-					<div class="progress-fill" id="progressFill"></div>
-				</div>
-				<div class="progress-percent" id="progressPercent">0%</div>
-			</div>
+            <div class="progress-container">
+                <div class="progress-info">
+                    <span class="progress-text">Progress</span>
+                    <span class="progress-count">
+                        <span id="currentStep">0</span>/<span id="totalSteps">14</span>
+                    </span>
+                </div>
 
-			<!-- Data Entry Form -->
-			<form id="dataForm" class="data-form">
-				<div class="form-section">
-					<div class="section-title">
-						<h3>Informasi Visit</h3>
-					</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-percent" id="progressPercent">0%</div>
+            </div>
 
-					<div class="input-group">
-						<label for="kode_sa">Kode SA <span class="required">*</span></label>
-						<input type="text" id="kode_sa" name="kode_sa" required
-							placeholder="Contoh: MC01021, MN10202">
-						<div class="error-msg" id="error_kode_sa"></div>
-					</div>
+            <!-- Formulir Data -->
+            <form id="dataForm" class="data-form">
+                <div class="form-section">
+                    <div class="section-title"><h3>Informasi Visit</h3></div>
 
-					<div class="input-group">
-						<label for="nama">Nama Lengkap <span class="required">*</span></label>
-						<input type="text" id="nama" name="nama" required
-							placeholder="Masukkan nama lengkap">
-						<div class="error-msg" id="error_nama"></div>
-					</div>
+                    <div class="input-group">
+                        <label for="kode_sa">Kode SA <span class="required">*</span></label>
+                        <input type="text" id="kode_sa" name="kode_sa" required placeholder="Contoh: MC01021, MN10202">
+                        <div class="error-msg" id="error_kode_sa"></div>
+                    </div>
 
-					<div class="input-group">
-						<label for="no_telp">Nomor HP SA<span class="required">*</span></label>
-						<input type="tel" id="no_telp" name="no_telp" required
-							placeholder="081234567890">
-						<div class="error-msg" id="error_no_telp"></div>
-					</div>
-				</div>
+                    <div class="input-group">
+                        <label for="nama">Nama Lengkap <span class="required">*</span></label>
+                        <input type="text" id="nama" name="nama" required placeholder="Masukkan nama lengkap">
+                        <div class="error-msg" id="error_nama"></div>
+                    </div>
 
-				<div class="form-section">
-					<div class="input-group">
-						<label for="witel">Witel <span class="required">*</span></label>
-						<select id="witel" name="witel" required>
-							<option value="">Pilih Witel</option>
-							<option value="Bali">Bali</option>
-							<option value="Jatim Barat">Jatim Barat</option>
-							<option value="Jatim Timur">Jatim Timur</option>
-							<option value="Nusa Tenggara">Nusa Tenggara</option>
-							<option value="Semarang Jateng">Semarang Jateng Utara</option>
-							<option value="Solo Jateng Timur">Solo Jateng Timur</option>
-							<option value="Suramadu">Suramadu</option>
-							<option value="Yogya Jateng Selatan">Yogya Jateng Selatan
-							</option>
-						</select>
-						<div class="error-msg" id="error_witel"></div>
-					</div>
+                    <div class="input-group">
+                        <label for="no_telp">Nomor HP SA<span class="required">*</span></label>
+                        <input type="tel" id="no_telp" name="no_telp" required placeholder="081234567890">
+                        <div class="error-msg" id="error_no_telp"></div>
+                    </div>
+                </div>
 
-					<div class="input-group">
-						<label for="telda">Telkom Daerah <span class="required">*</span></label>
-						<input type="text" id="telda" name="telda" required
-							placeholder="Nama Telkom Daerah">
-						<div class="error-msg" id="error_telda"></div>
-					</div>
+                <div class="form-section">
+                    <div class="input-group">
+                        <label for="witel">Witel <span class="required">*</span></label>
+                        <select id="witel" name="witel" required>
+                            <option value="">Pilih Witel</option>
+                            <option value="Bali">Bali</option>
+                            <option value="Jatim Barat">Jatim Barat</option>
+                            <option value="Jatim Timur">Jatim Timur</option>
+                            <option value="Nusa Tenggara">Nusa Tenggara</option>
+                            <option value="Semarang Jateng">Semarang Jateng Utara</option>
+                            <option value="Solo Jateng Timur">Solo Jateng Timur</option>
+                            <option value="Suramadu">Suramadu</option>
+                            <option value="Yogya Jateng Selatan">Yogya Jateng Selatan</option>
+                        </select>
+                        <div class="error-msg" id="error_witel"></div>
+                    </div>
 
-					<div class="input-group">
-						<label for="tanggal">Tanggal Visit <span
-								class="required">*</span></label>
-						<input type="date" id="tanggal" name="tanggal" required>
-						<div class="error-msg" id="error_tanggal"></div>
-					</div>
-				</div>
+                    <div class="input-group">
+                        <label for="telda">Telkom Daerah <span class="required">*</span></label>
+                        <input type="text" id="telda" name="telda" required placeholder="Nama Telkom Daerah">
+                        <div class="error-msg" id="error_telda"></div>
+                    </div>
 
-				<div class="form-section">
-					<div class="input-group">
-						<label for="kategori">Kategori Pelanggan <span
-								class="required">*</span></label>
-						<select id="kategori" name="kategori" required>
-							<option value="">Pilih Kategori</option>
-							<option value="Kawasan Industri">Kawasan Industri</option>
-							<option value="Desa">Desa</option>
-							<option value="Puskesmas">Puskesmas</option>
-							<option value="Kecamatan">Kecamatan</option>
-						</select>
-						<div class="error-msg" id="error_kategori"></div>
-					</div>
+                    <div class="input-group">
+                        <label for="tanggal">Tanggal Visit <span class="required">*</span></label>
+                        <input type="date" id="tanggal" name="tanggal" required>
+                        <div class="error-msg" id="error_tanggal"></div>
+                    </div>
+                </div>
 
-					<div class="input-group">
-						<label for="tenant">Nama Tenant/Desa/Puskesmas/Kecamatan <span
-								class="required">*</span></label>
-						<input type="text" id="tenant" name="tenant" required
-							placeholder="Nama lokasi yang dikunjungi">
-						<div class="error-msg" id="error_tenant"></div>
-					</div>
+                <div class="form-section">
+                    <div class="input-group">
+                        <label for="kategori">Kategori Pelanggan <span class="required">*</span></label>
+                        <select id="kategori" name="kategori" required>
+                            <option value="">Pilih Kategori</option>
+                            <option value="Kawasan Industri">Kawasan Industri</option>
+                            <option value="Desa">Desa</option>
+                            <option value="Puskesmas">Puskesmas</option>
+                            <option value="Kecamatan">Kecamatan</option>
+                        </select>
+                        <div class="error-msg" id="error_kategori"></div>
+                    </div>
 
-					<!-- Hidden input to store activity type -->
-					<input type="hidden" id="kegiatan" name="kegiatan">
-				</div>
+                    <div class="input-group">
+                        <label for="tenant">Nama Tenant/Desa/Puskesmas/Kecamatan <span class="required">*</span></label>
+                        <input type="text" id="tenant" name="tenant" required placeholder="Nama lokasi yang dikunjungi">
+                        <div class="error-msg" id="error_tenant"></div>
+                    </div>
 
-				<!-- Visit specific fields -->
-				<div id="visitFields" class="form-section" style="display: none;">
-					<div class="section-title">
-						<h3>Detail Visit Pelanggan</h3>
-					</div>
+                    <!-- Hidden input untuk jenis aktivitas -->
+                    <input type="hidden" id="kegiatan" name="kegiatan">
+                </div>
 
-					<div class="input-group">
-						<label for="layanan">Layanan yang digunakan saat ini? <span
-								class="required">*</span></label>
-						<select id="layanan" name="layanan">
-							<option value="">Pilih Layanan</option>
-							<option value="Indihome">Indihome</option>
-							<option value="Indibiz">Indibiz</option>
-							<option value="Kompetitor">Kompetitor</option>
-						</select>
-						<div class="error-msg" id="error_layanan"></div>
-					</div>
+                <!-- Bidang khusus Visit -->
+                <div id="visitFields" class="form-section" style="display: none;">
+                    <div class="section-title"><h3>Detail Visit Pelanggan</h3></div>
 
-					<div class="input-group">
-						<label for="tarif">Tarif Layanan Saat Ini <span
-								class="required">*</span></label>
-						<select id="tarif" name="tarif">
-							<option value="">Pilih Tarif</option>
-							<option value="< Rp 200.000">
-								< Rp 200.000</option>
-							<option value="Rp 200.000 - Rp 350.000">Rp 200.000 - Rp 350.000
-							</option>
-							<option value="> Rp 500.000">> Rp 500.000</option>
-						</select>
-						<div class="error-msg" id="error_tarif"></div>
-					</div>
-				</div>
+                    <div class="input-group">
+                        <label for="layanan">Layanan yang digunakan saat ini? <span class="required">*</span></label>
+                        <select id="layanan" name="layanan">
+                            <option value="">Pilih Layanan</option>
+                            <option value="Indihome">Indihome</option>
+                            <option value="Indibiz">Indibiz</option>
+                            <option value="Kompetitor">Kompetitor</option>
+                        </select>
+                        <div class="error-msg" id="error_layanan"></div>
+                    </div>
 
-				<!-- Dealing specific fields -->
-				<div id="dealingFields" class="form-section" style="display: none;">
-					<div class="section-title">
-						<h3>Dealing Pelanggan</h3>
-					</div>
+                    <div class="input-group">
+                        <label for="tarif">Tarif Layanan Saat Ini <span class="required">*</span></label>
+                        <select id="tarif" name="tarif">
+                            <option value="">Pilih Tarif</option>
+                            <option value="< Rp 200.000">< Rp 200.000</option>
+                            <option value="Rp 200.000 - Rp 350.000">Rp 200.000 - Rp 350.000</option>
+                            <option value="> Rp 500.000">> Rp 500.000</option>
+                        </select>
+                        <div class="error-msg" id="error_tarif"></div>
+                    </div>
+                </div>
 
-					<div class="input-group">
-						<label for="paket_deal">Jika Dealing, Deal Paket berapa Mbps? <span
-								class="required">*</span></label>
-						<select id="paket_deal" name="paket_deal">
-							<option value="">Pilih Paket</option>
-							<option value="50 Mbps">50 Mbps</option>
-							<option value="75 Mbps">75 Mbps</option>
-							<option value="100 Mbps">100 Mbps</option>
-							<option value="> 100 Mbps">> 100 Mbps</option>
-						</select>
-						<div class="error-msg" id="error_paket_deal"></div>
-					</div>
+                <!-- Bidang khusus Dealing -->
+                <div id="dealingFields" class="form-section" style="display: none;">
+                    <div class="section-title"><h3>Dealing Pelanggan</h3></div>
 
-					<div class="input-group">
-						<label for="deal_bundling">Apakah dealing untuk layanan bundling? <span
-								class="required">*</span></label>
-						<select id="deal_bundling" name="deal_bundling">
-							<option value="">Pilih Bundling</option>
-							<option value="1P Internet Only">1P Internet Only</option>
-							<option value="2P Internet + TV">2P Internet + TV</option>
-							<option value="2P Internet + Telepon">2P Internet + Telepon
-							</option>
-							<option value="3P Internet + TV + Telepon">3P Internet + TV +
-								Telepon</option>
-						</select>
-						<div class="error-msg" id="error_deal_bundling"></div>
-					</div>
-				</div>
+                    <div class="input-group">
+                        <label for="paket_deal">Jika Dealing, Deal paket berapa Mbps? <span class="required">*</span></label>
+                        <select id="paket_deal" name="paket_deal">
+                            <option value="">Pilih Paket</option>
+                            <option value="50 Mbps">50 Mbps</option>
+                            <option value="75 Mbps">75 Mbps</option>
+                            <option value="100 Mbps">100 Mbps</option>
+                            <option value="> 100 Mbps">> 100 Mbps</option>
+                        </select>
+                        <div class="error-msg" id="error_paket_deal"></div>
+                    </div>
 
-				<!-- PIC Data -->
-				<div class="form-section">
-					<div class="section-title">
-						<h3>Data PIC Pelanggan</h3>
-					</div>
+                    <div class="input-group">
+                        <label for="deal_bundling">Apakah dealing untuk layanan bundling? <span class="required">*</span></label>
+                        <select id="deal_bundling" name="deal_bundling">
+                            <option value="">Pilih Bundling</option>
+                            <option value="1P Internet Only">1P Internet Only</option>
+                            <option value="2P Internet + TV">2P Internet + TV</option>
+                            <option value="2P Internet + Telepon">2P Internet + Telepon</option>
+                            <option value="3P Internet + TV + Telepon">3P Internet + TV + Telepon</option>
+                        </select>
+                        <div class="error-msg" id="error_deal_bundling"></div>
+                    </div>
+                </div>
 
-					<div class="input-group">
-						<label for="nama_pic">Nama PIC Pelanggan <span
-								class="required">*</span></label>
-						<input type="text" id="nama_pic" name="nama_pic" required
-							placeholder="Nama PIC">
-						<div class="error-msg" id="error_nama_pic"></div>
-					</div>
+                <!-- Data PIC -->
+                <div class="form-section">
+                    <div class="section-title"><h3>Data PIC Pelanggan</h3></div>
 
-					<div class="input-group">
-						<label for="jabatan_pic">Jabatan PIC <span
-								class="required">*</span></label>
-						<input type="text" id="jabatan_pic" name="jabatan_pic" required
-							placeholder="Jabatan/Posisi">
-						<div class="error-msg" id="error_jabatan_pic"></div>
-					</div>
+                    <div class="input-group">
+                        <label for="nama_pic">Nama PIC Pelanggan <span class="required">*</span></label>
+                        <input type="text" id="nama_pic" name="nama_pic" required placeholder="Nama PIC">
+                        <div class="error-msg" id="error_nama_pic"></div>
+                    </div>
 
-					<div class="input-group">
-						<label for="telepon_pic">Nomor HP PIC Pelanggan<span
-								class="required">*</span></label>
-						<input type="tel" id="telepon_pic" name="telepon_pic" required
-							placeholder="Nomor HP PIC">
-						<div class="error-msg" id="error_telepon_pic"></div>
-					</div>
-				</div>
+                    <div class="input-group">
+                        <label for="jabatan_pic">Jabatan PIC <span class="required">*</span></label>
+                        <input type="text" id="jabatan_pic" name="jabatan_pic" required placeholder="Jabatan/Posisi">
+                        <div class="error-msg" id="error_jabatan_pic"></div>
+                    </div>
 
-				<!-- Photo Evidence -->
-				<div class="form-section">
-					<div class="section-title">
-						<h3>Foto Evidence Visit</h3>
-					</div>
+                    <div class="input-group">
+                        <label for="telepon_pic">Nomor HP PIC Pelanggan<span class="required">*</span></label>
+                        <input type="tel" id="telepon_pic" name="telepon_pic" required placeholder="Nomor HP PIC">
+                        <div class="error-msg" id="error_telepon_pic"></div>
+                    </div>
+                </div>
 
-					<div class="input-group">
-						<label for="foto_evidence">Upload Foto <span
-								class="required">*</span></label>
-						<div class="photo-upload"
-							onclick="document.getElementById('foto_evidence').click()">
-							<div id="photoPreview" class="photo-preview"
-								style="display: none;">
-								<img id="previewImg" src="" alt="Preview">
-								<button type="button" class="remove-photo"
-									onclick="removePhoto(event)">×</button>
-							</div>
-							<div id="uploadPrompt" class="upload-placeholder">
-								<div class="upload-icon">📷</div>
-								<div class="upload-text">
-									<h4>Tap untuk Upload Foto</h4>
-									<p>JPG, PNG • Max 5MB</p>
-								</div>
-							</div>
-						</div>
-						<input type="file" id="foto_evidence" name="foto_evidence"
-							accept="image/*" style="display: none;" required>
-						<div class="error-msg" id="error_foto_evidence"></div>
-					</div>
-				</div>
+                <!-- Foto Evidence -->
+                <div class="form-section">
+                    <div class="section-title"><h3>Foto Evidence Visit</h3></div>
 
-				<!-- Submit button -->
-				<div class="submit-container">
-					<button type="submit" class="submit-btn" id="submitButton">
-						<span class="btn-text">SUBMIT DATA</span>
-						<span class="btn-loader" style="display: none;">
-							<div class="spinner"></div>
-						</span>
-					</button>
-				</div>
-			</form>
-		</div>
+                    <div class="input-group">
+                        <label for="foto_evidence">Upload Foto <span class="required">*</span></label>
+                        <div class="photo-upload" onclick="document.getElementById('foto_evidence').click()">
+                            <div id="photoPreview" class="photo-preview" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview">
+                                <button type="button" class="remove-photo" onclick="removePhoto(event)">×</button>
+                            </div>
+                            <div id="uploadPrompt" class="upload-placeholder">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">
+                                    <h4>Tap untuk Upload Foto</h4>
+                                    <p>JPG, PNG • Max 5MB</p>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="foto_evidence" name="foto_evidence" accept="image/*" style="display: none;" required>
+                        <div class="error-msg" id="error_foto_evidence"></div>
+                    </div>
+                </div>
 
-		<!-- Modal for messages -->
-		<div id="messageModal" class="modal-overlay" style="display: none;">
-			<div class="modal-container">
-				<div class="modal-icon" id="modalIcon"></div>
-				<h3 id="modalTitle"></h3>
-				<p id="modalMessage"></p>
-				<button id="modalButton" class="modal-btn" onclick="backToMenu()">BUAT ENTRY
-					BARU</button>
-			</div>
-		</div>
-	</div>
+                <!-- Tombol Submit -->
+                <div class="submit-container">
+                    <button type="submit" class="submit-btn" id="submitButton">
+                        <span class="btn-text">SUBMIT DATA</span>
+                        <span class="btn-loader" style="display: none;">
+                            <div class="spinner"></div>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
 
-	<!-- Custom scripts -->
-	<script src="script.js"></script>
+        <!-- Modal success/error -->
+        <div id="messageModal" class="modal-overlay" style="display: none;">
+            <div class="modal-container">
+                <div class="modal-icon" id="modalIcon"></div>
+                <h3 id="modalTitle"></h3>
+                <p id="modalMessage"></p>
+                <!-- backToMenu sekarang juga menutup modal -->
+                <button id="modalButton" class="modal-btn" onclick="backToMenu()">BUAT ENTRY BARU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load custom scripts -->
+    <script src="script.js"></script>
 </body>
-
 </html>

@@ -518,6 +518,10 @@ body {
     margin-bottom: var(--space-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--gray-200);
+    /* Tetap terlihat saat scroll */
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 .progress-info {
     display: flex;
