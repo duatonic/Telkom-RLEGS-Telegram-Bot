@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 logger = logging.getLogger(__name__)
 
 HEADER_DATA = [
-    ["Kode SA", "Nama Lengkap", "Nomor HP SA", "Witel", "Telkom Daerah", "Tanggal Visit", "Kategori Pelanggan", "Nama Tenant / Desa / Puskesmas / Kecamatan yang divisit", "Kegiatan", "Layanan Saat Ini", "Tarif Layanan Saat Ini", "Nama PIC Pelanggan", "Jabatan PIC", "Nomor HP PIC Pelanggan", "Jika Dealing, Paket Berapa Mbps", "Dealing Layanan Bundling", "Foto Evidence Visit"]
+    ["Kode SA", "Nama Lengkap", "Nomor HP SA", "Witel", "Telkom Daerah", "Tanggal Visit", "Kategori Pelanggan", "Nama Tenant / Desa / Puskesmas / Kecamatan yang divisit", "Kegiatan", "Layanan Saat Ini", "Tarif Layanan Saat Ini", "Nama PIC Pelanggan", "Jabatan PIC", "Nomor HP PIC Pelanggan", "Deal Paket Berapa Mbps", "Dealing Layanan Bundling", "Foto Evidence Visit"]
 ]
 
 def append_data(service, new_data: list):

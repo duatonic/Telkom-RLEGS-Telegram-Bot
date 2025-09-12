@@ -707,7 +707,7 @@ Lengkapi setiap pertanyaan yang diberikan dan data akan otomatis tersimpan.
 
         # Continue to next step
         next_step = f"""
-**15.** Jika Anda melakukan **Dealing, pilih salah satu deal paket Mbps**:
+**15.** Pilih salah satu deal paket Mbps**:
         """
         # Create keyboard with 4 Dealing Paket options
         keyboard = [
