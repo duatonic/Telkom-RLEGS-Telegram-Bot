@@ -149,24 +149,6 @@ body {
     animation-delay: 0.4s;
 }
 
-.running-text-container {
-    width: 100%;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 25px;
-    padding: 12px 0;
-    margin-top: 20px;
-    backdrop-filter: blur(10px);
-}
-
-.running-text {
-    white-space: nowrap;
-    animation: scrollText 5s linear infinite;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-
 .loading-brand {
     font-size: 18px;
     font-weight: 700;
@@ -180,6 +162,67 @@ body {
     font-weight: 400;
     margin-bottom: 10px;
 }
+
+/* Kartu kode akses */
+.access-card {
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+    padding: var(--space-lg) var(--space-md);
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+}
+
+.access-input {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(255, 255, 255, 0.3); 
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 500;
+    background: var(--white);
+    color: var(--gray-900);
+    box-shadow: var(--shadow-sm);
+    outline: none; 
+}
+
+.access-input:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+    outline: none;
+}
+
+.login-btn {
+    width: 100%;
+    max-width: 280px;
+    margin: var(--space-sm) auto 0;
+    background: var(--gradient-primary);
+    color: var(--white);
+    border: none;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.access-error {
+    color: #ffffff !important;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: var(--space-xs);
+    text-align: center;
+    white-space: pre-line;
+}
+
 
 @keyframes logoFloat {
     0% { transform: translateY(0) rotate(0deg); }
@@ -205,9 +248,6 @@ body {
     .loading-container {
         max-width: 280px;
         padding: 15px;
-    }
-    .running-text {
-        font-size: 12px;
     }
 }
 

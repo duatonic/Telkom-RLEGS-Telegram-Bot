@@ -19,38 +19,58 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Konfigurasi Telegram Web App
     if (tg) {
         tg.ready();
         tg.expand();
-        if (tg.setHeaderColor) {
-            tg.setHeaderColor('#dc2626');
-        }
-        if (tg.setBackgroundColor) {
-            tg.setBackgroundColor('#F9FAFB');
-        }
-        if (tg.backgroundColor) {
-            document.body.style.backgroundColor = tg.backgroundColor;
-        }
+        if (tg.setHeaderColor) tg.setHeaderColor('#dc2626');
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#F9FAFB');
+        if (tg.backgroundColor) document.body.style.backgroundColor = tg.backgroundColor;
         tg.onEvent('viewportChanged', handleViewportChange);
     }
 
-    // Layar loading
-    setTimeout(() => {
-        const loadingScreen = document.getElementById('loading');
-        loadingScreen.style.opacity = '0';
-        setTimeout(() => {
-            loadingScreen.style.display = 'none';
-            const app = document.getElementById('app');
-            app.style.display = 'block';
-            app.classList.add('fade-in');
-        }, 500);
-    }, 2000);
+    setupAccessCode();
 
     setupEventListeners();
     applyTelegramTheme();
 
     console.log('🚀 RLEGS Data Entry App - Initialized Successfully!');
+}
+
+function setupAccessCode() {
+    const loadingScreen = document.getElementById('loading');
+    const app = document.getElementById('app');
+    const accessInput = document.getElementById('accessCodeInput');
+    const loginButton = document.getElementById('loginButton');
+    const accessError = document.getElementById('accessError');
+
+    function attemptUnlock() {
+        const code = accessInput.value.trim();
+        if (code === ACCESS_CODE) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                app.style.display = 'block';
+                app.classList.add('fade-in');
+                accessInput.value = '';
+                accessError.style.display = 'none';
+            }, 300);
+        } else {
+            accessError.textContent = 'Kode akses salah';
+            accessError.style.display = 'block';
+            accessInput.classList.add('error');
+            setTimeout(() => {
+                accessInput.classList.remove('error');
+            }, 300);
+        }
+    }
+
+    loginButton.addEventListener('click', attemptUnlock);
+    accessInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            attemptUnlock();
+        }
+    });
 }
 
 function setupEventListeners() {
@@ -674,3 +694,54 @@ window.RLEGS = {
     updateProgress,
     validateField
 };
+
+// KodeAkses
+const ACCESS_CODE = 'RLEGSTreg3';
+
+function setupAccessCode() {
+    const loadingScreen = document.getElementById('loading');
+    const app = document.getElementById('app');
+    const accessInput = document.getElementById('accessCodeInput');
+    const loginButton = document.getElementById('loginButton');
+    const accessError = document.getElementById('accessError');
+
+    if (!accessInput || !loginButton) {
+        loadingScreen.style.display = 'none';
+        app.style.display = 'block';
+        app.classList.add('fade-in');
+        return;
+    }
+
+    function attemptUnlock() {
+        const code = accessInput.value.trim();
+        if (code === ACCESS_CODE) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                app.style.display = 'block';
+                app.classList.add('fade-in');
+                accessInput.value = '';
+                accessError.style.display = 'none';
+            }, 300);
+        } else {
+            accessError.textContent = 'Kode akses salah. \nSilahkan Hubungi Admin.';
+            accessError.style.display = 'block';
+            accessInput.classList.add('error');
+            setTimeout(() => {
+                accessInput.classList.remove('error');
+            }, 300);
+        }
+    }
+
+    loginButton.addEventListener('click', attemptUnlock);
+    accessInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            attemptUnlock();
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupAccessCode();
+});
