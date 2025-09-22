@@ -2,17 +2,173 @@ import json
 import logging
 import base64
 from io import BytesIO
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
 from validators import DataValidator
 from googleservice import GoogleService
+from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+class ConversationState(Enum):
+    """Simplified states for mini app flow"""
+    IDLE = "idle"
+    PROCESSING_DATA = "processing_data"
+    COMPLETED = "completed"
+
+class UserSession:
+    """Simplified session class for mini app"""
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.state = ConversationState.IDLE
+        self.last_message_id = None
+        
+    def set_state(self, new_state):
+        """Update conversation state"""
+        self.state = new_state
+        
+    def reset(self):
+        """Reset session to initial state"""
+        self.state = ConversationState.IDLE
+        self.last_message_id = None
 
 class MiniAppHandler:
     def __init__(self):
         self.validator = DataValidator()
         self.google_service = GoogleService()
+
+    async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /start command - show mini app button"""
+        user = update.effective_user
+        user_name = user.first_name if user.first_name else "User"
+        
+        # Initialize Google services
+        self.google_service.authenticate()
+        self.google_service.build_services()
+        
+        welcome_message = f"""
+👋 Halo *{user_name}*!
+
+Selamat datang di *Rekapitulasi Data 8 Fishing Spot RLEGS III*
+
+📍 _Pendataan Visit Kawasan Industri, Desa, dan Puskesmas_
+"""
+        
+        # Create mini app button
+        keyboard = [
+            [InlineKeyboardButton(
+                "📝 Mulai Input Data", 
+                web_app=WebAppInfo(url="https://miniapp-rlegs.netlify.app/")
+            )]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            welcome_message, 
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+        
+        logger.info(f"Started mini app for user {user.id} ({user_name})")
+
+    async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /help command"""
+        help_text = """
+🤖 **Bot Rekap Data - Bantuan**
+
+**Perintah tersedia:**
+• `/start` - Memulai bot dan membuka form
+• `/help` - Menampilkan bantuan ini
+
+**Cara penggunaan:**
+1. Ketik `/start` atau klik tombol "Buka Form Data"
+2. Isi semua field yang diperlukan di form
+3. Upload foto evidence
+4. Submit data
+
+**Jenis data yang dapat diinput:**
+• **Visit** - Data kunjungan pelanggan
+• **Dealing** - Data penawaran/deal
+
+**Field yang perlu diisi:**
+- Kode SA, Nama, No. HP
+- Witel, Telkom Daerah, Tanggal
+- Kategori Pelanggan, Nama Tenant
+- Data PIC Pelanggan
+- Foto Evidence
+
+**Dukungan:**
+Jika mengalami masalah, hubungi administrator.
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton(
+                "📝 Buka Form Data", 
+                web_app=WebAppInfo(url="https://miniapp-rlegs.netlify.app/")
+            )]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            help_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+
+    async def handle_back_to_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle back to menu button callback"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_name = query.from_user.first_name if query.from_user.first_name else "User"
+        
+        message = f"""
+🎯 **Halo lagi, {user_name}!**
+
+📋 **Bot Rekap Data Visit & Dealing**
+
+Silakan gunakan form untuk input data baru:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton(
+                "📝 Buka Form Data", 
+                web_app=WebAppInfo(url="https://miniapp-rlegs.netlify.app/")
+            )]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            message,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+
+    async def handle_unknown_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle unknown commands"""
+        message = """
+❓ **Perintah tidak dikenali**
+
+Gunakan perintah berikut:
+• `/start` - Memulai bot
+• `/help` - Bantuan
+
+Atau klik tombol di bawah untuk membuka form:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton(
+                "📝 Mulai Input Data", 
+                web_app=WebAppInfo(url="https://miniapp-rlegs.netlify.app/")
+            )]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            message,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
         
     async def process_webapp_data(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Process data received from Mini App"""
@@ -32,10 +188,19 @@ class MiniAppHandler:
             
             if not validation_result['is_valid']:
                 # Return validation errors
+                keyboard = [
+                    [InlineKeyboardButton(
+                        "📝 Perbaiki Data di Form", 
+                        web_app=WebAppInfo(url="https://miniapp-rlegs.netlify.app/")
+                    )]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
                 await status_msg.edit_text(
                     f"❌ **Validasi Gagal**\n\n{validation_result['message']}\n\n"
                     "Silakan perbaiki data di form dan submit ulang.",
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
                 )
                 return
             
@@ -51,7 +216,7 @@ class MiniAppHandler:
             logger.error(f"Error processing webapp data: {e}")
             await update.message.reply_text(
                 "❌ **Error sistem:** Gagal memproses data dari form.\n"
-                "Silakan coba lagi atau gunakan input via chat."
+                "Silakan coba lagi."
             )
     
     async def _validate_form_data(self, data):
@@ -91,14 +256,14 @@ class MiniAppHandler:
         
         if kegiatan == 'Visit':
             if not data.get('layanan'):
-                errors.append("Layanan harus dipilih")
+                errors.append("Layanan harus dipilih untuk Visit")
             if not data.get('tarif'):
-                errors.append("Tarif harus dipilih")
+                errors.append("Tarif harus dipilih untuk Visit")
         elif kegiatan == 'Dealing':
             if not data.get('paket_deal'):
-                errors.append("Paket deal harus dipilih")
+                errors.append("Paket deal harus dipilih untuk Dealing")
             if not data.get('deal_bundling'):
-                errors.append("Deal bundling harus dipilih")
+                errors.append("Deal bundling harus dipilih untuk Dealing")
         
         # Validate PIC fields
         if not self.validator.validate_nama_pic(data.get('nama_pic', ''))[0]:
@@ -129,7 +294,7 @@ class MiniAppHandler:
             self.google_service.authenticate()
             self.google_service.build_services()
             
-            await status_msg.edit_text("⏳ **Menyimpan ke Google Sheet...**", parse_mode='Markdown')
+            await status_msg.edit_text("⏳ **Memproses foto...**", parse_mode='Markdown')
             
             # Process photo
             foto_evidence_b64 = data.get('foto_evidence')
@@ -142,13 +307,17 @@ class MiniAppHandler:
             image_file.seek(0)
 
             # Generate filename
-            kode_sa_string = data.get('kode_sa')
-            tanggal_string = data.get('tanggal')
-            kegiatan_string = data.get('kegiatan')
+            kode_sa_string = data.get('kode_sa', 'unknown').replace('/', '_')
+            tanggal_string = data.get('tanggal', 'nodate').replace('/', '_')
+            kegiatan_string = data.get('kegiatan', 'data')
             image_file_name = f"{kode_sa_string}_{tanggal_string}_{kegiatan_string}.jpg"
+
+            await status_msg.edit_text("⏳ **Mengupload foto ke Google Drive...**", parse_mode='Markdown')
 
             # Upload to Drive
             image_link = self.google_service.upload_to_drive(image_file, image_file_name)
+            
+            await status_msg.edit_text("⏳ **Menyimpan ke Google Sheet...**", parse_mode='Markdown')
             
             # Prepare data for sheets
             kegiatan = data.get('kegiatan')
@@ -182,6 +351,8 @@ class MiniAppHandler:
                 image_link,                    # 17
             ]
 
+            logger.info(f"Data to submit: {ordered_data}")
+
             # Save to sheets
             success, message = self.google_service.append_to_sheet([ordered_data])
             
@@ -194,7 +365,16 @@ class MiniAppHandler:
                 
                 activity_text = "Visit" if kegiatan == 'Visit' else "Dealing"
                 
-                final_msg = f"🎉 **Data {activity_text} Berhasil Disimpan!**\n\n🆔 Kode SA: {data.get('kode_sa', '-')}\n✅ Data lengkap (15 field) telah tersimpan ke Google Docs\n🕐 Waktu: Otomatis tercatat\n📱 Input via: Mini App Form\n---\n💡 **Pilih aksi selanjutnya:**"
+                final_msg = f"""🎉 **Data {activity_text} Berhasil Disimpan!**
+
+🆔 **Kode SA:** {data.get('kode_sa', '-')}
+✅ **Status:** Data lengkap (17 field) telah tersimpan ke Google Docs
+🕐 **Waktu:** Otomatis tercatat
+📱 **Input via:** Mini App Form
+📷 **Foto:** Tersimpan ke Google Drive
+
+---
+💡 **Pilih aksi selanjutnya:**"""
                 
                 await status_msg.edit_text(final_msg, parse_mode='Markdown', reply_markup=reply_markup)
                 
@@ -221,7 +401,7 @@ class MiniAppHandler:
             
             await status_msg.edit_text(
                 "❌ **Terjadi kesalahan sistem**\n\n"
-                "Silakan coba lagi atau gunakan input via chat.",
+                "Silakan coba lagi.",
                 parse_mode='Markdown',
                 reply_markup=reply_markup
             )

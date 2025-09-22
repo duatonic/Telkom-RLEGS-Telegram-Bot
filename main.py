@@ -1,12 +1,8 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from conversation_handlers import ConversationHandler
 from miniapp_handler import MiniAppHandler
 import config
-from io import BytesIO
-
-user_forms = {}
 
 # Setup logging
 logging.basicConfig(
@@ -15,149 +11,82 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize handlers
-conversation_handler = ConversationHandler()
+# Initialize mini app handler
 miniapp_handler = MiniAppHandler()
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command with Mini App and traditional options"""
-    user_name = update.effective_user.first_name
-    user_id = update.effective_user.id
-    session = conversation_handler.session_manager.get_session(user_id)
-    
-    if session.state.value != "idle":
-        logger.info(f"User {user_id} used /start during an active conversation. Resetting state.")
-        conversation_handler.session_manager.reset_session(user_id)
-        await update.message.reply_text("Sesi input sebelumnya telah dibatalkan.")
+    """Start command - delegate to mini app handler"""
+    await miniapp_handler.start_command(update, context)
 
-    welcome_text = f"""
-👋 Halo *{user_name}*!
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Help command - delegate to mini app handler"""
+    await miniapp_handler.help_command(update, context)
 
-Selamat datang di *Rekapitulasi Data 8 Fishing Spot RLEGS III*
-
-📍 _Pendataan Visit Kawasan Industri, Desa, dan Puskesmas_
-"""
-
-    webapp = WebAppInfo(url=config.WEBAPP_URL)
-    
-    keyboard = [
-        [InlineKeyboardButton("Mulai Input Data", web_app=webapp)],
-    ]
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text(
-        welcome_text, 
-        parse_mode='Markdown',
-        reply_markup=reply_markup
-    )
-
-# ========================
-# CANCEL COMMAND
-# ========================
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cancels the ongoing data entry conversation."""
-    user_id = update.effective_user.id
-    session = conversation_handler.session_manager.get_session(user_id)
-
-    if session.state.value != "idle":
-        logger.info(f"User {user_id} has cancelled the conversation.")
-        conversation_handler.session_manager.reset_session(user_id)
-        
-        keyboard = [[InlineKeyboardButton("🏠 Menu Utama", callback_data='back_to_menu')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(
-            "✅ *Proses input data telah dibatalkan.*\n\nPilih opsi di bawah untuk melanjutkan:",
-            parse_mode='Markdown',
-            reply_markup=reply_markup
-        )
-    else:
-        await start_command(update, context)
+    """Cancel command - redirect to start"""
+    await start_command(update, context)
 
 async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle button callbacks"""
     query = update.callback_query
-    await query.answer()  # hilangkan loading circle di Telegram
-
-    if query.data == "start_chat_input":
-        # langsung mulai alur input manual
-        await conversation_handler.handle_interactions(update, context)
-
-    elif query.data == "back_to_menu":
-        # kembali ke menu utama
-        await start_command_callback(query, context)
-
-    # kalau mau tambahin callback lain (misal show_help) bisa di sini
-
-# ========================
-# START COMMAND CALLBACK
-# ========================
-async def start_command_callback(query, context):
-    """Start command for callback queries"""
-    user_name = query.from_user.first_name
     
-    welcome_text = f"""
-👋 Halo *{user_name}*!
-
-Selamat datang di *Rekapitulasi Data 8 Fishing Spot RLEGS III*
-
-📍 _Pendataan Visit Kawasan Industri, Desa, dan Puskesmas_
-
-"""
-    webapp = WebAppInfo(url=config.WEBAPP_URL)
-    
-    keyboard = [
-        [InlineKeyboardButton("Mulai Input Data", web_app=webapp)],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        text=welcome_text,
-        parse_mode='Markdown',
-        reply_markup=reply_markup
-    )
+    if query.data == "back_to_menu":
+        await miniapp_handler.handle_back_to_menu(update, context)
+    else:
+        # Handle any other callbacks or unknown ones
+        await query.answer("Aksi tidak dikenali.")
+        await miniapp_handler.handle_back_to_menu(update, context)
 
 async def handle_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle data from Web App"""
-    if update.message and update.message.web_app_data:
-        await miniapp_handler.process_webapp_data(update, context)
+    await miniapp_handler.process_webapp_data(update, context)
 
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Welcome message for users who just start chatting (any text message when idle)"""
-    user_id = update.effective_user.id
-    session = conversation_handler.session_manager.get_session(user_id)
-    
-    if session.state.value == "idle":
-        await start_command(update, context)
-    else:
-        await conversation_handler.handle_interactions(update, context)
+    """Handle any text message - redirect to start for mini app"""
+    await miniapp_handler.handle_unknown_command(update, context)
+
+async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle unknown commands"""
+    await miniapp_handler.handle_unknown_command(update, context)
+
+async def handle_photo_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle photo messages - not needed for mini app, redirect to start"""
+    await update.message.reply_text(
+        "📷 Foto harus diupload melalui form.\n\n"
+        "Silakan gunakan tombol di bawah untuk membuka form:"
+    )
+    await miniapp_handler.start_command(update, context)
 
 def main():
     """Main function"""
     application = Application.builder().token(config.TELEGRAM_TOKEN).build()
     
-    # Handler untuk Web App data
+    # Handler untuk Web App data (prioritas tertinggi)
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_data))
     
     # Handler untuk callback buttons
-    application.add_handler(CallbackQueryHandler(button_callback_handler, pattern='^(start_chat_input|back_to_menu|show_help)$'))
+    application.add_handler(CallbackQueryHandler(button_callback_handler))
     
     # Command handlers
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel_command))
     
-    # Image handler
-    application.add_handler(MessageHandler(filters.PHOTO, conversation_handler.handle_interactions))
-
-    # Handle all text messages
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, conversation_handler.handle_interactions))
-
-    print("🤖 Bot RLEGS dengan Mini App Integration berjalan...")
+    # Handle unknown commands
+    application.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
+    
+    # Handle photo messages (redirect to form)
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo_messages))
+    
+    # Handle all other text messages (redirect to start)
+    application.add_handler(MessageHandler(filters.TEXT, handle_text_messages))
+    
+    print("🤖 Bot RLEGS Mini App berjalan...")
     print("📱 Mini App URL:", config.WEBAPP_URL)
-    print("📝 User flow: Menu → Mini App Form / Chat Input → Save")
-    print("🔘 Features: Web App Integration, Inline Keyboards, Status Tracking")
-    print("📊 Commands: /start, /cancel")
+    print("📝 User flow: /start → Mini App Form → Submit → Success")
+    print("🔘 Features: Web App Integration, Data Validation, Google Services")
+    print("📊 Commands: /start, /help, /cancel")
+    print("📋 Mode: Mini App Only (Manual input dihapus)")
     
     application.run_polling()
 
