@@ -36,15 +36,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Selamat datang di *Rekapitulasi Data 8 Fishing Spot RLEGS III*
 
 📍 _Pendataan Visit Kawasan Industri, Desa, dan Puskesmas_
-
-🔽 *Pilih metode input data:*
 """
 
     webapp = WebAppInfo(url=config.WEBAPP_URL)
     
     keyboard = [
-        [InlineKeyboardButton("Buka Form Mini App", web_app=webapp)],
-        [InlineKeyboardButton("Input manual via Chat", callback_data='start_chat_input')],
+        [InlineKeyboardButton("Mulai Input Data", web_app=webapp)],
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -107,13 +104,11 @@ Selamat datang di *Rekapitulasi Data 8 Fishing Spot RLEGS III*
 
 📍 _Pendataan Visit Kawasan Industri, Desa, dan Puskesmas_
 
-🔽 *Pilih metode input data:*
 """
     webapp = WebAppInfo(url=config.WEBAPP_URL)
     
     keyboard = [
-        [InlineKeyboardButton("Buka Form Mini App", web_app=webapp)],
-        [InlineKeyboardButton("Input manual via Chat", callback_data='start_chat_input')],
+        [InlineKeyboardButton("Mulai Input Data", web_app=webapp)],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
